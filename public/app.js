@@ -1,4 +1,11 @@
 import { DidAvatar } from "./did.js";
+import { initTracking, startTracking, stopTracking } from "./tracking.js";
+
+// Start loading the pose model early so it's ready by the time we connect.
+const trackingReady = initTracking().catch((e) => {
+  console.warn("pose model failed to load — avatars will stay in corners:", e.message);
+  return null;
+});
 
 const els = {
   stage: document.getElementById("stage"),
@@ -86,12 +93,21 @@ async function connect() {
   els.textInput.disabled = false;
   setStatus("Hold the button (or type) and ask them anything.");
 
+  // Track the user's shoulders and perch the avatars there (once the model
+  // is ready); falls back to the fixed corners if it never loads.
+  trackingReady.then((ok) => {
+    if (ok && connected) {
+      startTracking(els.userVideo, els.stage, { angel: els.angelWrap, devil: els.devilWrap });
+    }
+  });
+
   // Opening bit so the demo starts with energy.
   ask("", { silentUser: true });
 }
 
 async function disconnect() {
   connected = false;
+  stopTracking({ angel: els.angelWrap, devil: els.devilWrap });
   els.stage.classList.remove("connected");
   els.talkBtn.disabled = true;
   els.faceBtn.disabled = true;
