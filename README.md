@@ -10,7 +10,7 @@ visual experience is essential, not optional").
 
 - **D-ID** — two real-time streaming avatars (the faces on your shoulders).
 - **ElevenLabs** — the distinct voices for each character (via D-ID's TTS provider).
-- **Claude (vision)** — the "brain": looks at a webcam frame so the angels can
+- **OpenAI (vision)** — the "brain": looks at a webcam frame so the angels can
   react to *you*, and writes both characters' turn-taking dialogue.
 - **Browser** — camera + speech-to-text (free, no key).
 
@@ -20,7 +20,7 @@ visual experience is essential, not optional").
   🎤 you speak  ──►  Web Speech API (browser STT)
                           │  + 📸 webcam frame
                           ▼
-                     /api/brain  ──►  Claude (vision)
+                     /api/brain  ──►  OpenAI (vision)
                           │            └─► { angel: "...", devil: "..." }
                           ▼
         ┌─────────────────────────────────────────┐
@@ -43,7 +43,7 @@ without any audio-feedback loops.
 
 2. **Keys** — copy `.env.example` to `.env` and fill in:
    - `DID_API_KEY` — from D-ID Studio (top-right → API keys).
-   - `ANTHROPIC_API_KEY` — from https://console.anthropic.com.
+   - `OPENAI_API_KEY` — from https://platform.openai.com/api-keys.
    - In **D-ID Studio → Settings → Integrations**, connect your **ElevenLabs**
      API key. That's what lets D-ID speak in ElevenLabs voices. Then put the
      two `*_VOICE_ID`s you want in `.env`.
@@ -66,7 +66,7 @@ leave it connected.
 
 ## Files
 
-- `server.js` — Express: D-ID proxy + Claude brain + config + static.
+- `server.js` — Express: D-ID proxy + OpenAI brain + config + static.
 - `public/did.js` — D-ID Talks Streams WebRTC client (one instance per avatar).
 - `public/app.js` — camera, speech-to-text, orchestration, turn-taking.
 - `public/index.html` / `public/styles.css` — the shoulder-angel stage.

@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -13,8 +13,8 @@ app.use(express.json({ limit: "10mb" })); // webcam frames ride along as base64
 const {
   DID_API_KEY,
   DID_API_URL = "https://api.d-id.com",
-  ANTHROPIC_API_KEY,
-  BRAIN_MODEL = "claude-sonnet-4-6",
+  OPENAI_API_KEY,
+  BRAIN_MODEL = "gpt-4o",
   ANGEL_IMAGE_URL,
   DEVIL_IMAGE_URL,
   ANGEL_VOICE_ID,
@@ -108,10 +108,8 @@ app.delete("/api/did/streams/:id", async (req, res) => {
   res.status(ok ? 200 : status).json(data);
 });
 
-// ── The brain: Claude sees you + writes both characters' turn ───────────
-const anthropic = ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: ANTHROPIC_API_KEY })
-  : null;
+// ── The brain: OpenAI sees you + writes both characters' turn ───────────
+const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 const SYSTEM_PROMPT = `You are the writers' room for "Shoulder Angels" — a comedic two-character bit.
 
@@ -126,39 +124,37 @@ Rules for every turn:
 - Stay in character. Be quick and witty over verbose.`;
 
 const REPLY_TOOL = {
-  name: "shoulder_reply",
-  description: "Provide the angel's and devil's spoken lines for this turn.",
-  input_schema: {
-    type: "object",
-    properties: {
-      angel: { type: "string", description: "The angel's spoken line (1-2 sentences)." },
-      devil: { type: "string", description: "The devil's spoken line (1-2 sentences)." },
+  type: "function",
+  function: {
+    name: "shoulder_reply",
+    description: "Provide the angel's and devil's spoken lines for this turn.",
+    parameters: {
+      type: "object",
+      properties: {
+        angel: { type: "string", description: "The angel's spoken line (1-2 sentences)." },
+        devil: { type: "string", description: "The devil's spoken line (1-2 sentences)." },
+      },
+      required: ["angel", "devil"],
     },
-    required: ["angel", "devil"],
   },
 };
 
 app.post("/api/brain", async (req, res) => {
-  if (!anthropic) return res.status(500).json({ error: "ANTHROPIC_API_KEY not set" });
+  if (!openai) return res.status(500).json({ error: "OPENAI_API_KEY not set" });
 
   const { question = "", image, history = [] } = req.body || {};
 
-  const content = [];
+  const content = [
+    {
+      type: "text",
+      text: question
+        ? `The user just said: "${question}"\n\nWrite the angel's and devil's replies.`
+        : `The user didn't say anything specific — react to what you see in the camera. Write the angel's and devil's replies.`,
+    },
+  ];
   if (image) {
-    const m = /^data:(image\/\w+);base64,(.+)$/s.exec(image);
-    if (m) {
-      content.push({
-        type: "image",
-        source: { type: "base64", media_type: m[1], data: m[2] },
-      });
-    }
+    content.push({ type: "image_url", image_url: { url: image, detail: "low" } });
   }
-  content.push({
-    type: "text",
-    text: question
-      ? `The user just said: "${question}"\n\nWrite the angel's and devil's replies.`
-      : `The user didn't say anything specific — react to what you see in the camera. Write the angel's and devil's replies.`,
-  });
 
   // Trim history to recent turns for context (keeps them responding to each other).
   const priorTurns = history.slice(-6).map((h) => ({
@@ -167,19 +163,21 @@ app.post("/api/brain", async (req, res) => {
   }));
 
   try {
-    const msg = await anthropic.messages.create({
+    const completion = await openai.chat.completions.create({
       model: BRAIN_MODEL,
       max_tokens: 400,
-      system: [
-        { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...priorTurns,
+        { role: "user", content },
       ],
       tools: [REPLY_TOOL],
-      tool_choice: { type: "tool", name: "shoulder_reply" },
-      messages: [...priorTurns, { role: "user", content }],
+      tool_choice: { type: "function", function: { name: "shoulder_reply" } },
     });
-    const tool = msg.content.find((c) => c.type === "tool_use");
-    if (!tool) return res.status(502).json({ error: "no reply produced" });
-    res.json({ angel: tool.input.angel, devil: tool.input.devil });
+    const call = completion.choices[0]?.message?.tool_calls?.[0];
+    if (!call) return res.status(502).json({ error: "no reply produced" });
+    const { angel, devil } = JSON.parse(call.function.arguments);
+    res.json({ angel, devil });
   } catch (err) {
     console.error("brain error:", err.message);
     res.status(500).json({ error: err.message });
@@ -193,7 +191,7 @@ app.get("/api/config", (_req, res) => {
     devilImage: DEVIL_IMAGE_URL,
     ready: {
       did: Boolean(DID_API_KEY),
-      brain: Boolean(ANTHROPIC_API_KEY),
+      brain: Boolean(OPENAI_API_KEY),
       voices: Boolean(ANGEL_VOICE_ID && DEVIL_VOICE_ID),
     },
   });
@@ -204,5 +202,5 @@ app.use(express.static(path.join(__dirname, "public")));
 app.listen(PORT, () => {
   console.log(`😇 Shoulder Angels running → http://localhost:${PORT}`);
   if (!DID_API_KEY) console.warn("  ⚠  DID_API_KEY not set");
-  if (!ANTHROPIC_API_KEY) console.warn("  ⚠  ANTHROPIC_API_KEY not set");
+  if (!OPENAI_API_KEY) console.warn("  ⚠  OPENAI_API_KEY not set");
 });
