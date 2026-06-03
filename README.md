@@ -34,6 +34,10 @@ The backend is the orchestrator — it holds the API keys and the running
 transcript, so the two avatars genuinely respond to each other and to you
 without any audio-feedback loops.
 
+**Use my face:** hit the **👤 Use my face** button and it snaps a webcam still,
+uploads it to D-ID, and respawns *both* avatars wearing your face — a
+good-you 😇 and an evil-you 😈 arguing with each other. Hit it again to reset.
+
 ## Setup
 
 1. **Install**

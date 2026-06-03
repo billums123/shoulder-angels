@@ -178,6 +178,7 @@ header h1 {
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn:not(:disabled):active { transform: scale(0.97); }
 .primary { background: linear-gradient(135deg, var(--gold), #ff8a3d); color: #1a1200; }
+.face { background: linear-gradient(135deg, #2bd4c4, #2b8fff); color: #04181a; }
 .talk {
   background: linear-gradient(135deg, #6b7bff, #9b5cff);
   color: #fff;

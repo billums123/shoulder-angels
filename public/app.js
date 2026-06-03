@@ -10,6 +10,7 @@ const els = {
   angelCaption: document.getElementById("angel-caption"),
   devilCaption: document.getElementById("devil-caption"),
   connectBtn: document.getElementById("connect"),
+  faceBtn: document.getElementById("face"),
   talkBtn: document.getElementById("talk"),
   textInput: document.getElementById("text-input"),
   status: document.getElementById("status"),
@@ -36,10 +37,9 @@ async function startCamera() {
   await els.userVideo.play().catch(() => {});
 }
 
-function captureFrame() {
+function captureFrame(w = 512) {
   const v = els.userVideo;
   if (!v.videoWidth) return null;
-  const w = 512;
   const h = Math.round((v.videoHeight / v.videoWidth) * w);
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -77,6 +77,7 @@ async function connect() {
   els.connectBtn.textContent = "Disconnect";
   els.connectBtn.disabled = false;
   els.talkBtn.disabled = false;
+  els.faceBtn.disabled = false;
   els.textInput.disabled = false;
   setStatus("Hold the button (or type) and ask them anything.");
 
@@ -88,12 +89,59 @@ async function disconnect() {
   connected = false;
   els.stage.classList.remove("connected");
   els.talkBtn.disabled = true;
+  els.faceBtn.disabled = true;
   els.textInput.disabled = true;
   setStatus("Disconnected. Credits saved 💸");
   els.connectBtn.textContent = "Connect";
   await Promise.allSettled([angel?.disconnect(), devil?.disconnect()]);
   const s = els.userVideo.srcObject;
   if (s) s.getTracks().forEach((t) => t.stop());
+}
+
+// ── "Use my face": clone the webcam onto BOTH avatars (good-you vs evil-you)
+let usingMyFace = false;
+async function toggleMyFace() {
+  if (!connected || busy) return;
+  busy = true;
+  els.faceBtn.disabled = true;
+  els.talkBtn.disabled = true;
+
+  try {
+    let face = null; // null → revert both to preset faces
+    if (!usingMyFace) {
+      setStatus("Cloning your face onto both of them…");
+      const frame = captureFrame(640);
+      if (!frame) throw new Error("no camera frame yet");
+      const res = await fetch("/api/did/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: frame }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      face = data.url;
+      if (!face) throw new Error("upload returned no url");
+    } else {
+      setStatus("Restoring their real faces…");
+    }
+
+    // Respawn both streams with the new (or reset) face.
+    await Promise.allSettled([angel.disconnect(), devil.disconnect()]);
+    angel = new DidAvatar("angel", els.angelVideo, face);
+    devil = new DidAvatar("devil", els.devilVideo, face);
+    await Promise.all([angel.connect(), devil.connect()]);
+
+    usingMyFace = !usingMyFace;
+    els.faceBtn.textContent = usingMyFace ? "↩ Reset faces" : "👤 Use my face";
+    setStatus(usingMyFace ? "Meet good-you and evil-you 😇😈" : "");
+  } catch (e) {
+    console.error(e);
+    setStatus("Face swap failed: " + e.message);
+  }
+
+  busy = false;
+  els.faceBtn.disabled = !connected;
+  els.talkBtn.disabled = !connected;
 }
 
 // ── A turn: see → think → both speak ─────────────────────────────────────
@@ -197,6 +245,7 @@ function stopListening() {
 els.connectBtn.addEventListener("click", () =>
   connected ? disconnect() : connect(),
 );
+els.faceBtn.addEventListener("click", toggleMyFace);
 
 // Hold-to-talk (pointer covers mouse + touch).
 els.talkBtn.addEventListener("pointerdown", (e) => {

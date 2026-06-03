@@ -48,14 +48,37 @@ async function didFetch(endpoint, { method = "POST", body } = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// Upload a still (e.g. a webcam frame) to D-ID → returns a hosted image URL
+// that can be used as a stream's face. Powers the "evil twin" feature.
+app.post("/api/did/images", async (req, res) => {
+  const m = /^data:(image\/\w+);base64,(.+)$/s.exec(req.body?.image || "");
+  if (!m) return res.status(400).json({ error: "bad image data" });
+  const buf = Buffer.from(m[2], "base64");
+  const form = new FormData();
+  form.append("image", new Blob([buf], { type: m[1] }), "face.jpg");
+  const r = await fetch(`${DID_API_URL}/images`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${DID_API_KEY}` }, // let fetch set multipart boundary
+    body: form,
+  });
+  const data = await r.json().catch(() => ({}));
+  res.status(r.ok ? 200 : r.status).json(data);
+});
+
 // Create a stream for one presenter (angel|devil) → SDP offer + ice servers.
+// An optional source_url (e.g. a D-ID-hosted upload) overrides the preset face.
 app.post("/api/did/streams", async (req, res) => {
   const presenter = PRESENTERS[req.body?.presenter];
-  if (!presenter?.image) {
+  const override = req.body?.source_url;
+  const source_url =
+    typeof override === "string" && override.startsWith("https://")
+      ? override
+      : presenter?.image;
+  if (!source_url) {
     return res.status(400).json({ error: "unknown or unconfigured presenter" });
   }
   const { ok, status, data } = await didFetch("/talks/streams", {
-    body: { source_url: presenter.image, stream_warmup: true },
+    body: { source_url, stream_warmup: true },
   });
   res.status(ok ? 200 : status).json(data);
 });

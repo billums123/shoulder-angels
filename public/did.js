@@ -6,9 +6,10 @@ export class DidAvatar {
    * @param {"angel"|"devil"} presenter
    * @param {HTMLVideoElement} videoEl
    */
-  constructor(presenter, videoEl) {
+  constructor(presenter, videoEl, sourceUrl = null) {
     this.presenter = presenter;
     this.video = videoEl;
+    this.sourceUrl = sourceUrl; // optional custom face; falls back to preset
     this.pc = null;
     this.streamId = null;
     this.sessionId = null;
@@ -20,6 +21,7 @@ export class DidAvatar {
     // 1. Ask D-ID (via our backend) for an SDP offer + ICE servers.
     const session = await this._post("/api/did/streams", {
       presenter: this.presenter,
+      source_url: this.sourceUrl || undefined,
     });
     this.streamId = session.id;
     this.sessionId = session.session_id;
