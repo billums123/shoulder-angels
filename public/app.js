@@ -318,7 +318,7 @@ async function connect() {
   // is ready); falls back to the fixed corners if it never loads.
   trackingReady.then((ok) => {
     if (ok && connected) {
-      startTracking(els.userVideo, els.stage, { angel: els.angelWrap, devil: els.devilWrap });
+      startTracking(els.userVideo, els.stage, { angel: els.angelWrap, devil: els.devilWrap }, quip);
     }
   });
 
@@ -445,6 +445,41 @@ async function speakAs(who, line) {
   } finally {
     wrap.classList.remove("speaking");
   }
+}
+
+// ── Presence reactions (canned + gated) ─────────────────────────────────
+// One of them notices when you leave / come back. Canned lines (no brain call),
+// fired only on sustained absence (handled in tracking.js) and rate-limited.
+const QUIP_COOLDOWN = 25000; // ms between quips
+let lastQuip = 0;
+const QUIPS = {
+  left: {
+    angel: ["Take your time — I'll be right here.", "Off doing something good, I hope?", "Don't be long!"],
+    devil: ["Rude. I was mid-thought.", "Hey — where'd you go?", "Sneaking off already? Suspicious."],
+  },
+  returned: {
+    angel: ["There you are — welcome back!", "Oh good, you're back.", "Knew you'd return."],
+    devil: ["Finally. Took you long enough.", "Back for more bad ideas? Excellent.", "There they are."],
+  },
+};
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+async function quip(event) {
+  // Gated: never interrupt a real turn / recording / face-swap, and obey cooldown.
+  if (busy || !connected || !QUIPS[event]) return;
+  const now = performance.now();
+  if (now - lastQuip < QUIP_COOLDOWN) return;
+  lastQuip = now;
+  busy = true;
+  els.talkBtn.disabled = true;
+  const who = Math.random() < 0.5 ? "angel" : "devil";
+  try {
+    await speakAs(who, pick(QUIPS[event][who]));
+  } catch (e) {
+    console.warn("quip failed:", e.message);
+  }
+  busy = false;
+  els.talkBtn.disabled = !connected;
 }
 
 // ── Speech-to-text (browser, no key) ─────────────────────────────────────

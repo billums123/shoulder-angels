@@ -43,12 +43,18 @@ function mapToStage(px, py, video, stage) {
 }
 
 // ── Live shoulder tracking ──────────────────────────────────────────────
-export function startTracking(video, stage, avatars) {
+export function startTracking(video, stage, avatars, onPresence) {
   const smooth = {};
   const target = {}; // latest desired position per avatar (stage px), or null
   let lost = 0;
+  let found = 0;
+  let present = true; // assume present at start (opening line already plays)
+  let everSeen = false;
   let lastInfer = 0;
   let inferring = false;
+  // ~10fps inference → ticks ≈ 100ms each
+  const ABSENT_TICKS = 45; // ~4.5s sustained absence before "where'd you go?"
+  const RETURN_TICKS = 5; // ~0.5s of detections to confirm a return
 
   const targetFor = (el, point) => {
     const m = mapToStage(point.x, point.y, video, stage);
@@ -107,14 +113,30 @@ export function startTracking(video, stage, avatars) {
     const anchors = shoulderAnchors(poses[0]);
     if (anchors) {
       lost = 0;
+      found++;
       // Display is mirrored: the person's RIGHT shoulder appears on the
       // viewer's left. Angel sits on the left, devil on the right (matches the
       // logo's angel-left / devil-right composition).
       setTarget("angel", avatars.angel, anchors.right);
       setTarget("devil", avatars.devil, anchors.left);
-    } else if (++lost === 12) {
-      target.angel = target.devil = null;
-      resetToCorners(avatars); // pose lost → drift back to the corners
+      if (!everSeen) {
+        everSeen = true;
+        present = true;
+      } else if (!present && found >= RETURN_TICKS) {
+        present = true;
+        onPresence?.("returned");
+      }
+    } else {
+      found = 0;
+      lost++;
+      if (lost === 12) {
+        target.angel = target.devil = null;
+        resetToCorners(avatars); // pose lost → drift back to the corners
+      }
+      if (everSeen && present && lost === ABSENT_TICKS) {
+        present = false;
+        onPresence?.("left");
+      }
     }
   };
   rafId = requestAnimationFrame(tick);
