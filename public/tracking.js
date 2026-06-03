@@ -45,47 +45,69 @@ function mapToStage(px, py, video, stage) {
 // ── Live shoulder tracking ──────────────────────────────────────────────
 export function startTracking(video, stage, avatars) {
   const smooth = {};
+  const target = {}; // latest desired position per avatar (stage px), or null
   let lost = 0;
+  let lastInfer = 0;
+  let inferring = false;
 
-  const place = (el, point, key) => {
+  const targetFor = (el, point) => {
     const m = mapToStage(point.x, point.y, video, stage);
     const halfW = el.offsetWidth / 2;
     const halfH = el.offsetHeight / 2;
     // Clamp to the stage — shoulders are often near/below the bottom edge in
     // tight webcam framing, and we still want the avatar fully visible.
-    const tx = Math.min(Math.max(m.x, halfW), stage.clientWidth - halfW);
-    const ty = Math.min(Math.max(m.y - halfH * 0.3, halfH), stage.clientHeight - halfH);
-    const s = smooth[key] || (smooth[key] = { x: tx, y: ty });
-    s.x += (tx - s.x) * 0.25; // EMA smoothing
-    s.y += (ty - s.y) * 0.25;
+    return {
+      x: Math.min(Math.max(m.x, halfW), stage.clientWidth - halfW),
+      y: Math.min(Math.max(m.y - halfH * 0.3, halfH), stage.clientHeight - halfH),
+    };
+  };
+
+  const glide = (el, key) => {
+    const t = target[key];
+    if (!t) return;
+    const s = smooth[key] || (smooth[key] = { x: t.x, y: t.y });
+    s.x += (t.x - s.x) * 0.2; // EMA smoothing toward the latest target
+    s.y += (t.y - s.y) * 0.2;
     el.classList.add("tracked");
-    el.style.left = `${s.x - halfW}px`;
-    el.style.top = `${s.y - halfH}px`;
+    el.style.left = `${s.x - el.offsetWidth / 2}px`;
+    el.style.top = `${s.y - el.offsetHeight / 2}px`;
     el.style.right = "auto";
     el.style.bottom = "auto";
   };
 
-  const tick = async () => {
+  const tick = async (now) => {
     rafId = requestAnimationFrame(tick);
-    if (!detector || video.readyState < 2 || !video.videoWidth) return;
+    // Cheap every frame: glide the avatars toward their last known target.
+    glide(avatars.angel, "angel");
+    glide(avatars.devil, "devil");
+
+    // Expensive (pose inference): throttle to ~10fps so it doesn't starve the
+    // two D-ID video decoders — that contention is what makes audio/video drift.
+    if (inferring || !detector || video.readyState < 2 || !video.videoWidth) return;
+    if (now - lastInfer < 100) return;
+    lastInfer = now;
+    inferring = true;
     let poses;
     try {
       poses = await detector.estimatePoses(video, { maxPoses: 1, flipHorizontal: false });
     } catch {
+      inferring = false;
       return;
     }
+    inferring = false;
     const anchors = shoulderAnchors(poses[0]);
     if (anchors) {
       lost = 0;
       // Display is mirrored, so the person's right shoulder is on the viewer's
       // left. Put the angel on the viewer's left, devil on the right.
-      place(avatars.angel, anchors.right, "angel");
-      place(avatars.devil, anchors.left, "devil");
+      target.angel = targetFor(avatars.angel, anchors.right);
+      target.devil = targetFor(avatars.devil, anchors.left);
     } else if (++lost === 12) {
+      target.angel = target.devil = null;
       resetToCorners(avatars); // pose lost → drift back to the corners
     }
   };
-  tick();
+  rafId = requestAnimationFrame(tick);
 }
 
 // Confident shoulders if available; otherwise estimate the shoulder line from
