@@ -41,10 +41,14 @@
       <video id="user-video" class="user-video" autoplay playsinline muted></video>
 
       <!-- Idle placeholder (hidden once connected) -->
-      <div class="stage-empty" aria-hidden="true">
+      <div class="stage-empty">
         <div class="empty-faces">😇&nbsp;😈</div>
         <p class="empty-title">Two minds. Zero agreement.</p>
-        <p class="empty-sub">Press <strong>Summon them</strong> — then allow camera &amp; mic.</p>
+        <button id="connect" class="summon-btn">
+          <i class="ph-duotone ph-magic-wand"></i>
+          <span class="lbl">Summon your shoulder angels</span>
+        </button>
+        <p class="empty-sub">Allow camera &amp; mic when prompted.</p>
       </div>
 
       <!-- Good conscience -->
@@ -81,8 +85,8 @@
     </main>
 
     <div class="controls">
-      <button id="connect" class="btn primary">
-        <i class="ph-duotone ph-magic-wand"></i><span class="lbl">Summon them</span>
+      <button id="disconnect" class="btn ghost">
+        <i class="ph-duotone ph-link-break"></i><span class="lbl">Disconnect</span>
       </button>
       <button id="face" class="btn face" disabled>
         <i class="ph-duotone ph-user-focus"></i><span class="lbl">Use my face</span>

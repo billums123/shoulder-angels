@@ -374,10 +374,20 @@ header { text-align: center; margin: 24px 16px 12px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 .btn:not(:disabled):hover { filter: brightness(1.06); transform: translateY(-1px); }
 .btn:not(:disabled):active { transform: scale(0.97); }
-.primary { background: linear-gradient(135deg, var(--gold), #ff8a3d); color: #3a2400; }
-.face { background: linear-gradient(135deg, #5b4f5e, #322b39); }
-.voice { background: linear-gradient(135deg, var(--red), #ff6a4d); }
-.voice.active { background: linear-gradient(135deg, #cf8a2e, #9c5a16); }
+/* In-session controls share one ink surface for consistency; the icon carries
+   the meaning and the talk button is elevated with a warm gold underglow. */
+.face, .voice, .talk {
+  background: linear-gradient(135deg, #3a3340, #241f2c);
+  color: #fff;
+}
+.voice.active { background: linear-gradient(135deg, var(--gold), #ce8a2e); color: #3a2400; }
+.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  box-shadow: none;
+}
+.ghost:not(:disabled):hover { background: rgba(50, 43, 57, 0.06); filter: none; }
 .upload {
   background: var(--card);
   color: var(--ink);
@@ -386,13 +396,11 @@ header { text-align: center; margin: 24px 16px 12px; }
   border: 1.5px solid var(--line);
 }
 .talk {
-  background: linear-gradient(135deg, #3a3340, #221d29);
-  color: #fff;
   flex: 1;
   min-width: 180px;
   user-select: none;
   touch-action: none;
-  box-shadow: 0 8px 26px -10px rgba(239, 168, 58, 0.55); /* warm gold underglow */
+  box-shadow: 0 8px 26px -10px rgba(239, 168, 58, 0.65); /* warm gold underglow */
 }
 .talk.listening {
   background: linear-gradient(135deg, var(--red), #ff8a3d);
@@ -414,18 +422,65 @@ header { text-align: center; margin: 24px 16px 12px; }
 /* Conditional controls: hidden until connected, then pop into view (staggered).
    fill-mode 'backwards' so they stay hidden during the delay but don't lock
    transforms afterward (keeps hover/press feedback working). */
-.face, .voice, #talk, #text-input { display: none; }
+#disconnect, .face, .voice, #talk, #text-input { display: none; }
+body.live #disconnect,
 body.live .face,
 body.live .voice,
-body.live #talk { display: inline-flex; animation: pop-in 0.34s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards; }
+body.live #talk,
 body.live #text-input { display: inline-flex; animation: pop-in 0.34s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards; }
-body.live .face { animation-delay: 0.02s; }
-body.live .voice { animation-delay: 0.10s; }
-body.live #talk { animation-delay: 0.18s; }
+body.live #disconnect { animation-delay: 0.02s; }
+body.live .face { animation-delay: 0.08s; }
+body.live .voice { animation-delay: 0.14s; }
+body.live #talk { animation-delay: 0.20s; }
 body.live #text-input { animation-delay: 0.26s; }
 @keyframes pop-in {
   from { opacity: 0; transform: translateY(10px) scale(0.9); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Big centered Summon button (idle stage) ── */
+.summon-btn {
+  margin-top: 8px;
+  border: none;
+  border-radius: 999px;
+  padding: 16px 30px;
+  font-family: inherit;
+  font-size: clamp(1rem, 2.3vw, 1.25rem);
+  font-weight: 700;
+  color: #3a2400;
+  background: linear-gradient(135deg, #ffe08a, var(--gold) 45%, #ff8a3d);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 12px 34px -8px rgba(255, 160, 60, 0.7);
+  animation: summon-pulse 2.4s ease-in-out infinite;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+.summon-btn i { font-size: 1.35em; }
+.summon-btn:hover { filter: brightness(1.05); }
+.summon-btn:active { transform: scale(0.96); }
+.summon-btn:disabled { opacity: 0.6; cursor: progress; animation: none; }
+@keyframes summon-pulse {
+  0%, 100% { box-shadow: 0 12px 34px -8px rgba(255, 160, 60, 0.6), 0 0 0 0 rgba(255, 200, 110, 0.4); }
+  50% { box-shadow: 0 12px 40px -6px rgba(255, 160, 60, 0.85), 0 0 0 12px rgba(255, 200, 110, 0); }
+}
+
+/* ── Click sparkles (gold + red) ── */
+.sparkle {
+  position: fixed;
+  border-radius: 1px;
+  transform: translate(-50%, -50%) scale(0.3);
+  pointer-events: none;
+  z-index: 60;
+  box-shadow: 0 0 10px 2px currentColor;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: sparkle-fly 0.85s ease-out forwards;
+}
+@keyframes sparkle-fly {
+  0% { transform: translate(-50%, -50%) scale(0.3) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0) rotate(150deg); opacity: 0; }
 }
 
 .status {
@@ -461,7 +516,7 @@ body.live #text-input { animation-delay: 0.26s; }
 
   .controls { gap: 8px; margin-top: 16px; }
   .btn { padding: 12px 14px; font-size: 0.92rem; flex: 1 1 auto; justify-content: center; }
-  .primary, .face, .voice { flex-basis: calc(50% - 4px); } /* two per row */
+  #disconnect, .face, .voice { flex-basis: calc(50% - 4px); } /* two per row */
   .upload { flex: 0 0 auto; }
   .talk { flex-basis: 100%; min-width: 0; order: 9; padding: 16px; font-size: 1.05rem; }
   .text-input { flex-basis: 100%; min-width: 0; order: 10; }
@@ -472,5 +527,5 @@ body.live #text-input { animation-delay: 0.26s; }
 }
 
 @media (max-width: 380px) {
-  .primary, .face, .voice { flex-basis: 100%; } /* one per row on tiny screens */
+  #disconnect, .face, .voice { flex-basis: 100%; } /* one per row on tiny screens */
 }

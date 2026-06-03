@@ -18,6 +18,7 @@ const els = {
   angelCaption: document.getElementById("angel-caption"),
   devilCaption: document.getElementById("devil-caption"),
   connectBtn: document.getElementById("connect"),
+  disconnectBtn: document.getElementById("disconnect"),
   faceBtn: document.getElementById("face"),
   voiceBtn: document.getElementById("voice"),
   voiceFile: document.getElementById("voice-file"),
@@ -44,6 +45,32 @@ const history = [];
 
 function setStatus(msg) {
   els.status.textContent = msg;
+}
+
+// Burst of angelic-gold + devilish-red sparkles from an element (Summon click).
+function burstSparkles(el) {
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+  const N = 22;
+  for (let i = 0; i < N; i++) {
+    const s = document.createElement("span");
+    s.className = "sparkle";
+    const ang = (Math.PI * 2 * i) / N + Math.random() * 0.4;
+    const dist = 70 + Math.random() * 120;
+    const size = 7 + Math.random() * 9;
+    const color = i % 2 ? "#ffd76b" : "#ff5a4d"; // gold / red, alternating
+    s.style.left = `${cx}px`;
+    s.style.top = `${cy}px`;
+    s.style.width = s.style.height = `${size}px`;
+    s.style.color = color;
+    s.style.background = color;
+    s.style.setProperty("--tx", `${Math.cos(ang) * dist}px`);
+    s.style.setProperty("--ty", `${Math.sin(ang) * dist}px`);
+    s.style.animationDelay = `${Math.random() * 0.08}s`;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 1000);
+  }
 }
 
 // Update a button's label (and optionally its duotone icon) without clobbering
@@ -308,7 +335,6 @@ async function connect() {
   connected = true;
   els.stage.classList.add("connected");
   document.body.classList.add("live"); // reveal the now-usable controls
-  setBtn(els.connectBtn, "Disconnect", "ph-link-break");
   els.connectBtn.disabled = false;
   els.talkBtn.disabled = false;
   els.faceBtn.disabled = false;
@@ -333,12 +359,12 @@ async function disconnect() {
   stopTracking({ angel: els.angelWrap, devil: els.devilWrap });
   els.stage.classList.remove("connected");
   document.body.classList.remove("live"); // hide the controls again
+  els.connectBtn.disabled = false; // ready to summon again
   els.talkBtn.disabled = true;
   els.faceBtn.disabled = true;
   els.voiceBtn.disabled = true;
   els.textInput.disabled = true;
-  setStatus("Disconnected. Credits saved.");
-  setBtn(els.connectBtn, "Summon them", "ph-magic-wand");
+  setStatus("");
   await Promise.allSettled([angel?.disconnect(), devil?.disconnect()]);
   const s = els.userVideo.srcObject;
   if (s) s.getTracks().forEach((t) => t.stop());
@@ -525,9 +551,14 @@ function stopListening() {
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────
-els.connectBtn.addEventListener("click", () =>
-  connected ? disconnect() : connect(),
-);
+els.connectBtn.addEventListener("click", () => {
+  if (connected) return;
+  burstSparkles(els.connectBtn);
+  connect();
+});
+els.disconnectBtn.addEventListener("click", () => {
+  if (connected) disconnect();
+});
 els.faceBtn.addEventListener("click", toggleMyFace);
 els.voiceBtn.addEventListener("click", useMyVoice);
 // Voice upload temporarily disabled
