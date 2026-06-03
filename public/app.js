@@ -1,6 +1,7 @@
 import { DidAvatar } from "./did.js";
 import { initTracking, startTracking, stopTracking } from "./tracking.js";
 import { decorateFace } from "./decorate.js";
+import { startLoader, stopLoader } from "./loader.js";
 
 // Start loading the pose model early so it's ready by the time we connect.
 const trackingReady = initTracking().catch((e) => {
@@ -28,7 +29,16 @@ const els = {
   youSaid: document.getElementById("you-said"),
   captureOverlay: document.getElementById("capture-overlay"),
   voiceOverlay: document.getElementById("voice-overlay"),
+  stageLoader: document.getElementById("stage-loader"),
+  loaderCanvas: document.getElementById("loader-canvas"),
 };
+
+function showLoader(on) {
+  els.stage.classList.toggle("connecting", on);
+  els.stageLoader.hidden = !on;
+  if (on) startLoader(els.loaderCanvas);
+  else stopLoader();
+}
 
 const VOICE_PROMPT =
   "I am recording my voice so my shoulder angels can sound just like me. The quick brown fox jumps over the lazy dog.";
@@ -306,6 +316,7 @@ async function connect() {
     return;
   }
 
+  showLoader(true); // themed canvas loader over the stage while summoning
   setStatus("Giving them their halo and horns…");
   let sources;
   try {
@@ -327,12 +338,14 @@ async function connect() {
     const msg = /Max user sessions/.test(e.message)
       ? "D-ID says too many open sessions. Close other tabs running this, wait ~1–2 min for old streams to expire, then retry."
       : "Couldn't connect avatars: " + e.message;
+    showLoader(false);
     setStatus(msg);
     els.connectBtn.disabled = false;
     return;
   }
 
   connected = true;
+  showLoader(false);
   els.stage.classList.add("connected");
   document.body.classList.add("live"); // reveal the now-usable controls
   els.connectBtn.disabled = false;

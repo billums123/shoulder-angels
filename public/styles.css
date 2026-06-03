@@ -127,6 +127,31 @@ header { text-align: center; margin: 24px 16px 12px; }
 }
 .stage.connected .stage-empty { display: none; }
 .empty-sub { margin: 0; font-size: 0.95rem; color: #c3b8ba; }
+
+/* themed summoning loader (canvas) */
+.stage-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #f4ece0;
+  background: radial-gradient(120% 90% at 50% 45%, rgba(22, 17, 28, 0.86), rgba(10, 8, 16, 0.95));
+}
+.stage-loader[hidden] { display: none; }
+.loader-text {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-size: 1.05rem;
+  animation: loader-pulse 1.6s ease-in-out infinite;
+}
+@keyframes loader-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+/* hide the idle Summon content while connecting */
+.stage.connecting .stage-empty { display: none; }
 .empty-sub strong { color: var(--gold); }
 .user-video {
   position: absolute;
