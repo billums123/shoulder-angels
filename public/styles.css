@@ -470,27 +470,30 @@ body.live #text-input { animation-delay: 0.26s; }
 .summon-btn i { font-size: 1.35em; }
 .summon-btn:hover { filter: brightness(1.05); }
 .summon-btn:active { transform: scale(0.96); }
-.summon-btn:disabled { opacity: 0.6; cursor: progress; animation: none; }
+.summon-btn:disabled { cursor: progress; }
 @keyframes summon-pulse {
   0%, 100% { box-shadow: 0 12px 34px -8px rgba(255, 160, 60, 0.6), 0 0 0 0 rgba(255, 200, 110, 0.4); }
   50% { box-shadow: 0 12px 40px -6px rgba(255, 160, 60, 0.85), 0 0 0 12px rgba(255, 200, 110, 0); }
 }
 
-/* ── Click sparkles (gold + red) ── */
-.sparkle {
-  position: fixed;
-  border-radius: 1px;
-  transform: translate(-50%, -50%) scale(0.3);
+/* On click: shrink to a point (then the loader blooms from the same center) */
+.summon-btn.summoning {
   pointer-events: none;
-  z-index: 60;
-  box-shadow: 0 0 10px 2px currentColor;
-  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  animation: sparkle-fly 0.85s ease-out forwards;
+  animation: summon-collapse 0.42s cubic-bezier(0.5, 0, 0.7, 0.35) forwards;
 }
-@keyframes sparkle-fly {
-  0% { transform: translate(-50%, -50%) scale(0.3) rotate(0deg); opacity: 0; }
-  15% { opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0) rotate(150deg); opacity: 0; }
+@keyframes summon-collapse {
+  0% { transform: scale(1); opacity: 1; }
+  55% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(0.05); opacity: 0; }
+}
+
+/* Loader blooms in from the center where the button collapsed */
+.stage-loader:not([hidden]) { animation: loader-fade 0.3s ease both; }
+#loader-canvas { animation: loader-pop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.3) both; }
+@keyframes loader-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes loader-pop {
+  from { transform: scale(0.25); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .status {

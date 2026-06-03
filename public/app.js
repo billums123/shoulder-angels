@@ -57,32 +57,6 @@ function setStatus(msg) {
   els.status.textContent = msg;
 }
 
-// Burst of angelic-gold + devilish-red sparkles from an element (Summon click).
-function burstSparkles(el) {
-  const r = el.getBoundingClientRect();
-  const cx = r.left + r.width / 2;
-  const cy = r.top + r.height / 2;
-  const N = 22;
-  for (let i = 0; i < N; i++) {
-    const s = document.createElement("span");
-    s.className = "sparkle";
-    const ang = (Math.PI * 2 * i) / N + Math.random() * 0.4;
-    const dist = 70 + Math.random() * 120;
-    const size = 7 + Math.random() * 9;
-    const color = i % 2 ? "#ffd76b" : "#ff5a4d"; // gold / red, alternating
-    s.style.left = `${cx}px`;
-    s.style.top = `${cy}px`;
-    s.style.width = s.style.height = `${size}px`;
-    s.style.color = color;
-    s.style.background = color;
-    s.style.setProperty("--tx", `${Math.cos(ang) * dist}px`);
-    s.style.setProperty("--ty", `${Math.sin(ang) * dist}px`);
-    s.style.animationDelay = `${Math.random() * 0.08}s`;
-    document.body.appendChild(s);
-    setTimeout(() => s.remove(), 1000);
-  }
-}
-
 // Update a button's label (and optionally its duotone icon) without clobbering
 // the <i> icon the way textContent would.
 function setBtn(btn, label, iconClass) {
@@ -312,11 +286,14 @@ async function connect() {
     await startCamera();
   } catch (e) {
     setStatus("Camera/mic permission needed. Allow access and retry.");
+    els.connectBtn.classList.remove("summoning");
     els.connectBtn.disabled = false;
     return;
   }
 
-  showLoader(true); // themed canvas loader over the stage while summoning
+  // let the Summon button finish shrinking, then bloom into the loader
+  await new Promise((r) => setTimeout(r, 380));
+  showLoader(true);
   setStatus("Giving them their halo and horns…");
   let sources;
   try {
@@ -340,6 +317,7 @@ async function connect() {
       : "Couldn't connect avatars: " + e.message;
     showLoader(false);
     setStatus(msg);
+    els.connectBtn.classList.remove("summoning");
     els.connectBtn.disabled = false;
     return;
   }
@@ -372,6 +350,7 @@ async function disconnect() {
   stopTracking({ angel: els.angelWrap, devil: els.devilWrap });
   els.stage.classList.remove("connected");
   document.body.classList.remove("live"); // hide the controls again
+  els.connectBtn.classList.remove("summoning"); // restore the Summon button
   els.connectBtn.disabled = false; // ready to summon again
   els.talkBtn.disabled = true;
   els.faceBtn.disabled = true;
@@ -565,8 +544,9 @@ function stopListening() {
 
 // ── Wiring ───────────────────────────────────────────────────────────────
 els.connectBtn.addEventListener("click", () => {
-  if (connected) return;
-  burstSparkles(els.connectBtn);
+  if (connected || els.connectBtn.disabled) return;
+  els.connectBtn.disabled = true;
+  els.connectBtn.classList.add("summoning"); // shrink away, then bloom into loader
   connect();
 });
 els.disconnectBtn.addEventListener("click", () => {
