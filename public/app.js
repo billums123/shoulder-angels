@@ -292,9 +292,9 @@ async function connect() {
   }
 
   // let the Summon button finish shrinking, then bloom into the loader
-  await new Promise((r) => setTimeout(r, 380));
+  await new Promise((r) => setTimeout(r, 420));
   showLoader(true);
-  setStatus("Giving them their halo and horns…");
+  setStatus(""); // the loader already shows the "Summoning…" label
   let sources;
   try {
     sources = await prepareSources();
@@ -303,7 +303,6 @@ async function connect() {
     sources = { angel: null, devil: null };
   }
 
-  setStatus("Summoning your shoulder angels…");
   angel = new DidAvatar("angel", els.angelVideo, sources.angel);
   devil = new DidAvatar("devil", els.devilVideo, sources.devil);
   try {

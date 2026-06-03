@@ -111,7 +111,8 @@ header { text-align: center; margin: 24px 16px 12px; }
     inset -18px 0 70px -40px var(--red-glow);
 }
 
-/* idle placeholder */
+/* idle placeholder — same dark scrim as the loader so the camera never flashes
+   through behind the shrinking button */
 .stage-empty {
   position: absolute;
   inset: 0;
@@ -124,6 +125,7 @@ header { text-align: center; margin: 24px 16px 12px; }
   text-align: center;
   padding: 24px;
   color: #f4ece0;
+  background: radial-gradient(120% 90% at 50% 45%, rgba(22, 17, 28, 0.94), rgba(10, 8, 16, 0.98));
 }
 .stage.connected .stage-empty { display: none; }
 .empty-sub { margin: 0; font-size: 0.95rem; color: #c3b8ba; }
