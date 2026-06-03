@@ -1,5 +1,6 @@
 import { DidAvatar } from "./did.js";
 import { initTracking, startTracking, stopTracking } from "./tracking.js";
+import { decorateFace } from "./decorate.js";
 
 // Start loading the pose model early so it's ready by the time we connect.
 const trackingReady = initTracking().catch((e) => {
@@ -28,6 +29,8 @@ let angel, devil;
 let connected = false;
 let busy = false;
 let angelFirst = true; // alternate who opens each turn
+let usingMyFace = false;
+let presetImages = {}; // { angel, devil } URLs from /api/config
 const history = [];
 
 function setStatus(msg) {
@@ -55,6 +58,60 @@ function captureFrame(w = 512) {
   return canvas.toDataURL("image/jpeg", 0.7);
 }
 
+// ── Source faces with baked-in halo / horns ─────────────────────────────
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("image load failed"));
+    // Route remote images through our proxy so the canvas isn't tainted.
+    img.src = url.startsWith(location.origin)
+      ? url
+      : `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  });
+}
+
+async function uploadDataUrl(dataUrl) {
+  const res = await fetch("/api/did/images", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: dataUrl }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()).url;
+}
+
+// Decorate one face and upload it; returns a D-ID source URL, or null to let
+// the server fall back to the plain preset.
+async function decoratedSource(type, baseEl) {
+  try {
+    return await uploadDataUrl(await decorateFace(baseEl, type));
+  } catch (e) {
+    console.warn(`decorate ${type} failed:`, e.message);
+    return null;
+  }
+}
+
+// Build both avatars' source URLs (halo + horns baked in) for the current mode.
+async function prepareSources() {
+  await trackingReady; // need the pose model for head placement
+  let angelBase, devilBase;
+  if (usingMyFace) {
+    angelBase = devilBase = els.userVideo; // your live face, decorated two ways
+  } else {
+    [angelBase, devilBase] = await Promise.all([
+      loadImage(presetImages.angel),
+      loadImage(presetImages.devil),
+    ]);
+  }
+  const [angelUrl, devilUrl] = await Promise.all([
+    decoratedSource("angel", angelBase),
+    decoratedSource("devil", devilBase),
+  ]);
+  return { angel: angelUrl, devil: devilUrl };
+}
+
 // ── Connect / disconnect ────────────────────────────────────────────────
 async function connect() {
   els.connectBtn.disabled = true;
@@ -67,9 +124,18 @@ async function connect() {
     return;
   }
 
+  setStatus("Giving them their halo and horns…");
+  let sources;
+  try {
+    sources = await prepareSources();
+  } catch (e) {
+    console.warn("source prep failed, using plain presets:", e.message);
+    sources = { angel: null, devil: null };
+  }
+
   setStatus("Summoning your shoulder angels…");
-  angel = new DidAvatar("angel", els.angelVideo);
-  devil = new DidAvatar("devil", els.devilVideo);
+  angel = new DidAvatar("angel", els.angelVideo, sources.angel);
+  devil = new DidAvatar("devil", els.devilVideo, sources.devil);
   try {
     await Promise.all([angel.connect(), devil.connect()]);
   } catch (e) {
@@ -119,46 +185,33 @@ async function disconnect() {
   if (s) s.getTracks().forEach((t) => t.stop());
 }
 
-// ── "Use my face": clone the webcam onto BOTH avatars (good-you vs evil-you)
-let usingMyFace = false;
+// ── "Use my face": clone the webcam onto BOTH avatars (good-you vs evil-you),
+//    each with its halo / horns baked in.
 async function toggleMyFace() {
   if (!connected || busy) return;
   busy = true;
   els.faceBtn.disabled = true;
   els.talkBtn.disabled = true;
   let swapped = false;
+  const target = !usingMyFace;
 
   try {
-    let face = null; // null → revert both to preset faces
-    if (!usingMyFace) {
-      setStatus("Cloning your face onto both of them…");
-      const frame = captureFrame(640);
-      if (!frame) throw new Error("no camera frame yet");
-      const res = await fetch("/api/did/images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: frame }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      face = data.url;
-      if (!face) throw new Error("upload returned no url");
-    } else {
-      setStatus("Restoring their real faces…");
-    }
+    setStatus(target ? "Cloning your face onto both of them…" : "Restoring their real faces…");
+    usingMyFace = target; // prepareSources reads this
+    const sources = await prepareSources();
 
-    // Respawn both streams with the new (or reset) face.
+    // Respawn both streams with the new faces.
     await Promise.allSettled([angel.disconnect(), devil.disconnect()]);
-    angel = new DidAvatar("angel", els.angelVideo, face);
-    devil = new DidAvatar("devil", els.devilVideo, face);
+    angel = new DidAvatar("angel", els.angelVideo, sources.angel);
+    devil = new DidAvatar("devil", els.devilVideo, sources.devil);
     await Promise.all([angel.connect(), devil.connect()]);
 
-    usingMyFace = !usingMyFace;
     els.faceBtn.textContent = usingMyFace ? "↩ Reset faces" : "👤 Use my face";
     setStatus(usingMyFace ? "Meet good-you and evil-you 😇😈" : "");
     swapped = true;
   } catch (e) {
     console.error(e);
+    usingMyFace = !target; // revert flag on failure
     setStatus("Face swap failed: " + e.message);
   }
 
@@ -300,13 +353,14 @@ if (!SR) {
   els.talkBtn.title = "Speech recognition unsupported here — type your question instead.";
 }
 
-// Health hint on load.
+// Config: preset face URLs + a health hint.
 fetch("/api/config")
   .then((r) => r.json())
   .then((c) => {
+    presetImages = { angel: c.angelImage, devil: c.devilImage };
     const missing = [];
     if (!c.ready?.did) missing.push("DID_API_KEY");
-    if (!c.ready?.brain) missing.push("ANTHROPIC_API_KEY");
+    if (!c.ready?.brain) missing.push("OPENAI_API_KEY");
     if (!c.ready?.voices) missing.push("voice IDs");
     if (missing.length) setStatus("⚠ Missing in .env: " + missing.join(", "));
   })

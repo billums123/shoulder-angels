@@ -141,39 +141,9 @@ header h1 {
   mix-blend-mode: overlay;
 }
 
-/* ── Crowns: a floating golden halo for the angel, horns for the devil ── */
-.crown { position: absolute; z-index: 3; pointer-events: none; }
-.angel .crown {
-  top: -16%;
-  left: 50%;
-  width: 60%;
-  height: 18px;
-  border-radius: 50%;
-  border: 4px solid var(--gold);
-  border-bottom-color: rgba(255, 215, 107, 0.35);
-  box-shadow: 0 0 16px 3px var(--gold-glow), inset 0 0 8px var(--gold-glow);
-  transform: translateX(-50%) rotateX(62deg);
-  animation: ring-bob 6s ease-in-out infinite;
-}
-@keyframes ring-bob {
-  0%, 100% { transform: translateX(-50%) rotateX(62deg) translateY(0); }
-  50%      { transform: translateX(-50%) rotateX(62deg) translateY(-5px); }
-}
-.devil .crown { inset: 0; }
-.devil .crown::before,
-.devil .crown::after {
-  content: "";
-  position: absolute;
-  top: -9%;
-  width: 0;
-  height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-bottom: 24px solid #7c1414;
-  filter: drop-shadow(0 0 5px var(--red-glow));
-}
-.devil .crown::before { left: 22%; transform: rotate(-24deg); }
-.devil .crown::after  { right: 22%; transform: rotate(24deg); }
+/* The halo ring + horns are now baked into the avatar's source image (so they
+   move with the head, rendered by D-ID). The glow + color wash above remain as
+   ambient accents. */
 
 .badge {
   position: absolute;

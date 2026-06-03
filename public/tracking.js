@@ -48,15 +48,19 @@ export function startTracking(video, stage, avatars) {
   let lost = 0;
 
   const place = (el, point, key) => {
-    const { x, y } = mapToStage(point.x, point.y, video, stage);
-    const tx = x;
-    const ty = y - el.offsetHeight * 0.12; // sit just above the shoulder
+    const m = mapToStage(point.x, point.y, video, stage);
+    const halfW = el.offsetWidth / 2;
+    const halfH = el.offsetHeight / 2;
+    // Clamp to the stage — shoulders are often near/below the bottom edge in
+    // tight webcam framing, and we still want the avatar fully visible.
+    const tx = Math.min(Math.max(m.x, halfW), stage.clientWidth - halfW);
+    const ty = Math.min(Math.max(m.y - halfH * 0.3, halfH), stage.clientHeight - halfH);
     const s = smooth[key] || (smooth[key] = { x: tx, y: ty });
     s.x += (tx - s.x) * 0.25; // EMA smoothing
     s.y += (ty - s.y) * 0.25;
     el.classList.add("tracked");
-    el.style.left = `${s.x - el.offsetWidth / 2}px`;
-    el.style.top = `${s.y - el.offsetHeight / 2}px`;
+    el.style.left = `${s.x - halfW}px`;
+    el.style.top = `${s.y - halfH}px`;
     el.style.right = "auto";
     el.style.bottom = "auto";
   };
@@ -70,20 +74,44 @@ export function startTracking(video, stage, avatars) {
     } catch {
       return;
     }
-    const pose = poses[0];
-    const ls = kp(pose, "left_shoulder");
-    const rs = kp(pose, "right_shoulder");
-    if (ls && rs && ls.score > 0.3 && rs.score > 0.3) {
+    const anchors = shoulderAnchors(poses[0]);
+    if (anchors) {
       lost = 0;
       // Display is mirrored, so the person's right shoulder is on the viewer's
       // left. Put the angel on the viewer's left, devil on the right.
-      place(avatars.angel, rs, "angel");
-      place(avatars.devil, ls, "devil");
+      place(avatars.angel, anchors.right, "angel");
+      place(avatars.devil, anchors.left, "devil");
     } else if (++lost === 12) {
       resetToCorners(avatars); // pose lost → drift back to the corners
     }
   };
   tick();
+}
+
+// Confident shoulders if available; otherwise estimate the shoulder line from
+// the head so the avatars still follow the user in tight head-and-shoulders
+// framing (where the real shoulders sit at/below the frame edge).
+function shoulderAnchors(pose) {
+  if (!pose) return null;
+  const ls = kp(pose, "left_shoulder");
+  const rs = kp(pose, "right_shoulder");
+  if (ls?.score > 0.35 && rs?.score > 0.35) return { left: ls, right: rs };
+
+  const nose = kp(pose, "nose");
+  if (!nose || nose.score < 0.3) return null;
+  const le = kp(pose, "left_eye");
+  const re = kp(pose, "right_eye");
+  const lEar = kp(pose, "left_ear");
+  const rEar = kp(pose, "right_ear");
+  let hw;
+  if (lEar?.score > 0.3 && rEar?.score > 0.3) hw = Math.abs(lEar.x - rEar.x) * 1.5;
+  else if (le?.score > 0.3 && re?.score > 0.3) hw = Math.abs(le.x - re.x) * 3;
+  else return null;
+  const y = nose.y + hw * 1.15; // down toward the shoulder line
+  return {
+    left: { x: nose.x + hw * 1.05, y },
+    right: { x: nose.x - hw * 1.05, y },
+  };
 }
 
 export function stopTracking(avatars) {

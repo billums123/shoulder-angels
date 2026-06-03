@@ -55,6 +55,24 @@ async function didFetch(endpoint, { method = "POST", body } = {}) {
   }
 }
 
+// Same-origin proxy for external images, so the browser can draw preset faces
+// onto a canvas (to bake halo/horns) without tainting it via CORS.
+app.get("/api/proxy-image", async (req, res) => {
+  const url = req.query.url;
+  if (typeof url !== "string" || !/^https:\/\//.test(url)) {
+    return res.status(400).json({ error: "https url required" });
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return res.status(r.status).end();
+    res.set("Content-Type", r.headers.get("content-type") || "image/jpeg");
+    res.set("Cache-Control", "public, max-age=3600");
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // Upload a still (e.g. a webcam frame) to D-ID → returns a hosted image URL
 // that can be used as a stream's face. Powers the "evil twin" feature.
 app.post("/api/did/images", async (req, res) => {
