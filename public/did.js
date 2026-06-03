@@ -77,12 +77,13 @@ export class DidAvatar {
 
   /** Speak a line; resolves when the avatar finishes (data-channel signal or
    *  a length-based fallback so turn-taking never stalls). */
-  async speak(text) {
+  async speak(text, voiceId) {
     if (!text || !this.streamId) return;
     await this._post(`/api/did/streams/${this.streamId}/talk`, {
       text,
       presenter: this.presenter,
       session_id: this.sessionId,
+      voice_id: voiceId || undefined,
     });
     await this._waitForDone(text);
   }

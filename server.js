@@ -19,8 +19,11 @@ const {
   DEVIL_IMAGE_URL,
   ANGEL_VOICE_ID,
   DEVIL_VOICE_ID,
+  ELEVENLABS_API_KEY,
   PORT = 3000,
 } = process.env;
+
+const ELEVENLABS_API = "https://api.elevenlabs.io/v1";
 
 const PRESENTERS = {
   angel: { image: ANGEL_IMAGE_URL, voice: ANGEL_VOICE_ID },
@@ -90,6 +93,45 @@ app.post("/api/did/images", async (req, res) => {
   res.status(r.ok ? 200 : r.status).json(data);
 });
 
+// Clone a voice from a recorded/uploaded audio sample via ElevenLabs Instant
+// Voice Cloning → returns a voice_id usable by D-ID. The voice is created in
+// the same ElevenLabs account connected to D-ID, so D-ID can speak it.
+app.post("/api/clone-voice", async (req, res) => {
+  if (!ELEVENLABS_API_KEY) return res.status(500).json({ error: "ELEVENLABS_API_KEY not set" });
+  const m = /^data:(audio\/[\w.+-]+);base64,(.+)$/s.exec(req.body?.audio || "");
+  if (!m) return res.status(400).json({ error: "bad audio data" });
+  const buf = Buffer.from(m[2], "base64");
+  const ext = m[1].includes("webm") ? "webm" : /mpeg|mp3/.test(m[1]) ? "mp3" : m[1].includes("wav") ? "wav" : "m4a";
+  const headers = { "xi-api-key": ELEVENLABS_API_KEY };
+
+  try {
+    // Remove prior clones from this app so we don't pile up against the
+    // account's custom-voice limit.
+    const list = await fetch(`${ELEVENLABS_API}/voices`, { headers })
+      .then((r) => r.json())
+      .catch(() => ({ voices: [] }));
+    for (const v of list.voices || []) {
+      if (v.voice_id && typeof v.name === "string" && v.name.startsWith("shoulder-angels")) {
+        await fetch(`${ELEVENLABS_API}/voices/${v.voice_id}`, { method: "DELETE", headers }).catch(() => {});
+      }
+    }
+
+    const form = new FormData();
+    form.append("name", `shoulder-angels-${Date.now()}`);
+    form.append("files", new Blob([buf], { type: m[1] }), `voice.${ext}`);
+    const r = await fetch(`${ELEVENLABS_API}/voices/add`, { method: "POST", headers, body: form });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.warn("clone-voice failed:", r.status, data);
+      return res.status(r.status).json(data);
+    }
+    res.json({ voice_id: data.voice_id });
+  } catch (e) {
+    console.error("clone-voice error:", e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // Create a stream for one presenter (angel|devil) → SDP offer + ice servers.
 // An optional source_url (e.g. a D-ID-hosted upload) overrides the preset face.
 app.post("/api/did/streams", async (req, res) => {
@@ -128,10 +170,11 @@ app.post("/api/did/streams/:id/ice", async (req, res) => {
   res.status(ok ? 200 : status).json(data);
 });
 
-// Make a presenter speak a line in its ElevenLabs voice.
+// Make a presenter speak a line in its ElevenLabs voice. An optional voice_id
+// (e.g. a cloned "use my voice" voice) overrides the preset.
 app.post("/api/did/streams/:id/talk", async (req, res) => {
-  const { text, presenter, session_id } = req.body || {};
-  const voice = PRESENTERS[presenter]?.voice;
+  const { text, presenter, session_id, voice_id } = req.body || {};
+  const voice = voice_id || PRESENTERS[presenter]?.voice;
   if (!text || !voice) {
     return res.status(400).json({ error: "missing text or voice" });
   }
@@ -243,6 +286,7 @@ app.get("/api/config", (_req, res) => {
       did: Boolean(DID_API_KEY),
       brain: Boolean(OPENAI_API_KEY),
       voices: Boolean(ANGEL_VOICE_ID && DEVIL_VOICE_ID),
+      clone: Boolean(ELEVENLABS_API_KEY),
     },
   });
 });

@@ -19,18 +19,26 @@ const els = {
   devilCaption: document.getElementById("devil-caption"),
   connectBtn: document.getElementById("connect"),
   faceBtn: document.getElementById("face"),
+  voiceBtn: document.getElementById("voice"),
+  voiceFile: document.getElementById("voice-file"),
   talkBtn: document.getElementById("talk"),
   textInput: document.getElementById("text-input"),
   status: document.getElementById("status"),
   youSaid: document.getElementById("you-said"),
   captureOverlay: document.getElementById("capture-overlay"),
+  voiceOverlay: document.getElementById("voice-overlay"),
 };
+
+const VOICE_PROMPT =
+  "I am recording my voice so my shoulder angels can sound just like me. The quick brown fox jumps over the lazy dog.";
+const VOICE_SECONDS = 12;
 
 let angel, devil;
 let connected = false;
 let busy = false;
 let angelFirst = true; // alternate who opens each turn
 let usingMyFace = false;
+let voiceOverride = null; // cloned "use my voice" voice_id (both avatars)
 let presetImages = {}; // { angel, devil } URLs from /api/config
 const history = [];
 
@@ -103,6 +111,96 @@ function runCaptureCountdown() {
     };
     setTimeout(step, 800);
   });
+}
+
+// ── Use my voice (ElevenLabs instant voice cloning) ─────────────────────
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+}
+
+// Record ~VOICE_SECONDS of mic audio while showing a read-prompt + timer.
+async function recordVoiceSample() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const rec = new MediaRecorder(stream);
+  const chunks = [];
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  const stopped = new Promise((r) => (rec.onstop = r));
+  rec.start();
+
+  const ov = els.voiceOverlay;
+  const promptEl = ov.querySelector(".voice-prompt");
+  const countEl = ov.querySelector(".capture-count");
+  promptEl.textContent = `“${VOICE_PROMPT}”`;
+  ov.hidden = false;
+  for (let s = VOICE_SECONDS; s > 0; s--) {
+    countEl.textContent = `🔴 ${s}s`;
+    await new Promise((r) => setTimeout(r, 1000));
+    if (!connected) break; // bail if disconnected mid-record
+  }
+  ov.hidden = true;
+  countEl.textContent = "";
+  rec.stop();
+  await stopped;
+  stream.getTracks().forEach((t) => t.stop());
+  return new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+}
+
+async function cloneAndApply(blob) {
+  setStatus("Cloning your voice with ElevenLabs…");
+  const dataUrl = await blobToDataUrl(blob);
+  const res = await fetch("/api/clone-voice", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ audio: dataUrl }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    setStatus(/instant_voice|can_not_use|subscription/i.test(err)
+      ? "Voice cloning needs a paid ElevenLabs plan."
+      : "Voice clone failed: " + err.slice(0, 120));
+    return;
+  }
+  const { voice_id } = await res.json();
+  voiceOverride = voice_id;
+  els.voiceBtn.textContent = "🎙️ Your voice ✓";
+  els.voiceBtn.classList.add("active");
+  setStatus("Now they speak in your voice. Ask them something!");
+}
+
+async function useMyVoice() {
+  if (busy || !connected) return;
+  busy = true;
+  els.voiceBtn.disabled = true;
+  els.talkBtn.disabled = true;
+  try {
+    const blob = await recordVoiceSample();
+    await cloneAndApply(blob);
+  } catch (e) {
+    console.error(e);
+    setStatus("Mic/record failed: " + e.message);
+  }
+  busy = false;
+  els.voiceBtn.disabled = !connected;
+  els.talkBtn.disabled = !connected;
+}
+
+async function uploadVoice(file) {
+  if (busy || !connected || !file) return;
+  busy = true;
+  els.voiceBtn.disabled = true;
+  try {
+    await cloneAndApply(file);
+  } catch (e) {
+    console.error(e);
+    setStatus("Voice upload failed: " + e.message);
+  }
+  busy = false;
+  els.voiceBtn.disabled = !connected;
 }
 
 // ── Source faces with baked-in halo / horns ─────────────────────────────
@@ -203,6 +301,7 @@ async function connect() {
   els.connectBtn.disabled = false;
   els.talkBtn.disabled = false;
   els.faceBtn.disabled = false;
+  els.voiceBtn.disabled = false;
   els.textInput.disabled = false;
   setStatus("Hold the button (or type) and ask them anything.");
 
@@ -224,6 +323,7 @@ async function disconnect() {
   els.stage.classList.remove("connected");
   els.talkBtn.disabled = true;
   els.faceBtn.disabled = true;
+  els.voiceBtn.disabled = true;
   els.textInput.disabled = true;
   setStatus("Disconnected. Credits saved 💸");
   els.connectBtn.textContent = "Connect";
@@ -331,7 +431,7 @@ async function speakAs(who, line) {
   caption.textContent = line;
   wrap.classList.add("speaking");
   try {
-    await avatar.speak(line);
+    await avatar.speak(line, voiceOverride);
   } finally {
     wrap.classList.remove("speaking");
   }
@@ -381,6 +481,12 @@ els.connectBtn.addEventListener("click", () =>
   connected ? disconnect() : connect(),
 );
 els.faceBtn.addEventListener("click", toggleMyFace);
+els.voiceBtn.addEventListener("click", useMyVoice);
+els.voiceFile.addEventListener("change", (e) => {
+  const f = e.target.files?.[0];
+  if (f) uploadVoice(f);
+  e.target.value = "";
+});
 
 // Don't leak D-ID sessions on reload/close — tear streams down on the way out.
 window.addEventListener("pagehide", () => {

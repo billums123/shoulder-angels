@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shoulder Angels 😇😈</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Caveat:wght@600&family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
     <!-- TensorFlow.js + MoveNet (pose detection) for shoulder tracking -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js"></script>
@@ -12,16 +18,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
   </head>
   <body>
+    <!-- Ambient split background: hell (left) vs heaven (right) -->
+    <div class="realm hell" aria-hidden="true">
+      <span class="ember"></span><span class="ember"></span><span class="ember"></span>
+      <span class="ember"></span><span class="ember"></span><span class="ember"></span>
+    </div>
+    <div class="realm heaven" aria-hidden="true">
+      <span class="cloud"></span><span class="cloud"></span><span class="cloud"></span>
+    </div>
+    <div class="seam" aria-hidden="true"></div>
+
     <header>
-      <h1>Shoulder <span class="good">Angels</span> &amp; <span class="bad">Devils</span></h1>
-      <p class="tag">Ask out loud. They can see you. They never agree.</p>
+      <h1 class="title">
+        <span class="bad">Shoulder Devils</span>
+        <span class="amp">vs</span>
+        <span class="good">Shoulder Angels</span>
+      </h1>
+      <p class="tag">Ask out loud. They can <em>see</em> you. They will <em>never</em> agree.</p>
     </header>
 
     <main id="stage" class="stage">
+      <div class="stage-frame" aria-hidden="true"></div>
+
       <!-- You, center stage -->
       <video id="user-video" class="user-video" autoplay playsinline muted></video>
 
-      <!-- Good conscience, left shoulder -->
+      <!-- Good conscience -->
       <figure id="angel" class="avatar angel">
         <div class="halo"></div>
         <video id="angel-video" autoplay playsinline></video>
@@ -29,7 +51,7 @@
         <span class="badge">😇</span>
       </figure>
 
-      <!-- Bad conscience, right shoulder -->
+      <!-- Bad conscience -->
       <figure id="devil" class="avatar devil">
         <div class="halo"></div>
         <video id="devil-video" autoplay playsinline></video>
@@ -45,11 +67,22 @@
         <div class="capture-text">Center your face in the oval &amp; hold still</div>
         <div class="capture-count"></div>
       </div>
+
+      <!-- Voice-record guide for "Use my voice" -->
+      <div id="voice-overlay" class="capture-overlay" hidden>
+        <div class="capture-text">🎙️ Read this aloud, clearly:</div>
+        <div class="voice-prompt"></div>
+        <div class="capture-count"></div>
+      </div>
     </main>
 
     <div class="controls">
-      <button id="connect" class="btn primary">Connect</button>
+      <button id="connect" class="btn primary">Summon them</button>
       <button id="face" class="btn face" disabled>👤 Use my face</button>
+      <button id="voice" class="btn voice" disabled>🎙️ Use my voice</button>
+      <label class="btn upload" title="Upload a voice clip instead">
+        ⤓<input id="voice-file" type="file" accept="audio/*" hidden />
+      </label>
       <button id="talk" class="btn talk" disabled>🎤 Hold to talk</button>
       <input
         id="text-input"
@@ -60,6 +93,10 @@
       />
     </div>
     <p id="status" class="status"></p>
+
+    <footer class="credits">
+      Powered by <strong>D-ID</strong> avatars · <strong>ElevenLabs</strong> voices · <strong>OpenAI</strong> vision
+    </footer>
 
     <script type="module" src="app.js"></script>
   </body>

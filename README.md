@@ -9,10 +9,22 @@ Built for the **D-ID × ElevenLabs hackathon** ("Build an AI agent where the
 visual experience is essential, not optional").
 
 - **D-ID** — two real-time streaming avatars (the faces on your shoulders).
-- **ElevenLabs** — the distinct voices for each character (via D-ID's TTS provider).
+- **ElevenLabs** — the distinct voices for each character (via D-ID's TTS
+  provider), plus **instant voice cloning** so they can speak in *your* voice.
 - **OpenAI (vision)** — the "brain": looks at a webcam frame so the angels can
   react to *you*, and writes both characters' turn-taking dialogue.
+- **TensorFlow.js (MoveNet)** — tracks your shoulders so the avatars perch on
+  them, and finds your head to bake a halo / red ring into each face.
 - **Browser** — camera + speech-to-text (free, no key).
+
+## Extras
+
+- **👤 Use my face** — alignment guide + countdown, then both avatars wear your
+  face (good-you 😇 vs evil-you 😈), each with its ring baked in.
+- **🎙️ Use my voice** — record a short sample (or upload a clip) → ElevenLabs
+  clones it → both avatars speak in your voice. (Needs a paid ElevenLabs plan.)
+- **Shoulder tracking** — the avatars follow your shoulders; they drift to the
+  corners if no pose is found.
 
 ## How it works
 
