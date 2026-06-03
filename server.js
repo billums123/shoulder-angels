@@ -30,22 +30,29 @@ const PRESENTERS = {
 // ── D-ID proxy ──────────────────────────────────────────────────────────
 // The API key never leaves the server; the browser talks only to us.
 async function didFetch(endpoint, { method = "POST", body } = {}) {
-  const res = await fetch(`${DID_API_URL}${endpoint}`, {
-    method,
-    headers: {
-      Authorization: `Basic ${DID_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let data;
   try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { raw: text };
+    const res = await fetch(`${DID_API_URL}${endpoint}`, {
+      method,
+      headers: {
+        Authorization: `Basic ${DID_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await res.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { raw: text };
+    }
+    if (!res.ok) console.warn(`D-ID ${method} ${endpoint} → ${res.status}`, data);
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    // Never let a thrown error leave the HTTP request hanging "pending".
+    console.error(`D-ID ${method} ${endpoint} threw:`, err.message);
+    return { ok: false, status: 502, data: { error: err.message } };
   }
-  return { ok: res.ok, status: res.status, data };
 }
 
 // Upload a still (e.g. a webcam frame) to D-ID → returns a hosted image URL
@@ -70,8 +77,10 @@ app.post("/api/did/images", async (req, res) => {
 app.post("/api/did/streams", async (req, res) => {
   const presenter = PRESENTERS[req.body?.presenter];
   const override = req.body?.source_url;
+  // D-ID's own image uploads come back as s3:// URIs (resolved internally by
+  // D-ID), so accept those as well as plain https:// image URLs.
   const source_url =
-    typeof override === "string" && override.startsWith("https://")
+    typeof override === "string" && /^(https|s3):\/\//.test(override)
       ? override
       : presenter?.image;
   if (!source_url) {

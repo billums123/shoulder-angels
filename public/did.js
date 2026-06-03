@@ -19,10 +19,9 @@ export class DidAvatar {
 
   async connect() {
     // 1. Ask D-ID (via our backend) for an SDP offer + ICE servers.
-    const session = await this._post("/api/did/streams", {
-      presenter: this.presenter,
-      source_url: this.sourceUrl || undefined,
-    });
+    //    Retry on "Max user sessions" — when respawning (e.g. face swap), the
+    //    just-deleted streams can take a moment to free their session slots.
+    const session = await this._createStream();
     this.streamId = session.id;
     this.sessionId = session.session_id;
 
@@ -103,7 +102,41 @@ export class DidAvatar {
     this.streamId = null;
   }
 
+  // Best-effort teardown during page unload (reload/close). Uses keepalive so
+  // the DELETE survives navigation — prevents leaking D-ID sessions, which
+  // would otherwise pile up and trigger "Max user sessions reached".
+  beaconClose() {
+    if (!this.streamId) return;
+    try {
+      fetch(`/api/did/streams/${this.streamId}`, {
+        method: "DELETE",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: this.sessionId }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
   // ── internals ──
+  async _createStream(tries = 4) {
+    for (let i = 0; i < tries; i++) {
+      try {
+        return await this._post("/api/did/streams", {
+          presenter: this.presenter,
+          source_url: this.sourceUrl || undefined,
+        });
+      } catch (e) {
+        if (/Max user sessions/.test(e.message) && i < tries - 1) {
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+        throw e;
+      }
+    }
+  }
+
   _resolveDone() {
     const waiters = this._doneWaiters;
     this._doneWaiters = [];

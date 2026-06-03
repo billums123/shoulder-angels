@@ -67,7 +67,12 @@ async function connect() {
     await Promise.all([angel.connect(), devil.connect()]);
   } catch (e) {
     console.error(e);
-    setStatus("Couldn't connect avatars: " + e.message);
+    // Clean up whichever stream did open so it doesn't leak.
+    await Promise.allSettled([angel?.disconnect(), devil?.disconnect()]);
+    const msg = /Max user sessions/.test(e.message)
+      ? "D-ID says too many open sessions. Close other tabs running this, wait ~1–2 min for old streams to expire, then retry."
+      : "Couldn't connect avatars: " + e.message;
+    setStatus(msg);
     els.connectBtn.disabled = false;
     return;
   }
@@ -105,6 +110,7 @@ async function toggleMyFace() {
   busy = true;
   els.faceBtn.disabled = true;
   els.talkBtn.disabled = true;
+  let swapped = false;
 
   try {
     let face = null; // null → revert both to preset faces
@@ -134,6 +140,7 @@ async function toggleMyFace() {
     usingMyFace = !usingMyFace;
     els.faceBtn.textContent = usingMyFace ? "↩ Reset faces" : "👤 Use my face";
     setStatus(usingMyFace ? "Meet good-you and evil-you 😇😈" : "");
+    swapped = true;
   } catch (e) {
     console.error(e);
     setStatus("Face swap failed: " + e.message);
@@ -142,6 +149,11 @@ async function toggleMyFace() {
   busy = false;
   els.faceBtn.disabled = !connected;
   els.talkBtn.disabled = !connected;
+
+  // A freshly respawned D-ID stream renders blank until its first talk, so
+  // kick off an opening line — this makes the new faces appear immediately
+  // (and gives the demo a reaction beat right after the swap).
+  if (swapped && connected) ask("", { silentUser: true });
 }
 
 // ── A turn: see → think → both speak ─────────────────────────────────────
@@ -246,6 +258,12 @@ els.connectBtn.addEventListener("click", () =>
   connected ? disconnect() : connect(),
 );
 els.faceBtn.addEventListener("click", toggleMyFace);
+
+// Don't leak D-ID sessions on reload/close — tear streams down on the way out.
+window.addEventListener("pagehide", () => {
+  angel?.beaconClose();
+  devil?.beaconClose();
+});
 
 // Hold-to-talk (pointer covers mouse + touch).
 els.talkBtn.addEventListener("pointerdown", (e) => {
