@@ -411,6 +411,23 @@ header { text-align: center; margin: 24px 16px 12px; }
 }
 .text-input::placeholder { color: var(--muted); }
 
+/* Conditional controls: hidden until connected, then pop into view (staggered).
+   fill-mode 'backwards' so they stay hidden during the delay but don't lock
+   transforms afterward (keeps hover/press feedback working). */
+.face, .voice, #talk, #text-input { display: none; }
+body.live .face,
+body.live .voice,
+body.live #talk { display: inline-flex; animation: pop-in 0.34s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards; }
+body.live #text-input { display: inline-flex; animation: pop-in 0.34s cubic-bezier(0.2, 0.8, 0.3, 1.2) backwards; }
+body.live .face { animation-delay: 0.02s; }
+body.live .voice { animation-delay: 0.10s; }
+body.live #talk { animation-delay: 0.18s; }
+body.live #text-input { animation-delay: 0.26s; }
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .status {
   min-height: 1.2em;
   color: var(--muted);

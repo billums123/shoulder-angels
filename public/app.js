@@ -307,6 +307,7 @@ async function connect() {
 
   connected = true;
   els.stage.classList.add("connected");
+  document.body.classList.add("live"); // reveal the now-usable controls
   setBtn(els.connectBtn, "Disconnect", "ph-link-break");
   els.connectBtn.disabled = false;
   els.talkBtn.disabled = false;
@@ -331,6 +332,7 @@ async function disconnect() {
   connected = false;
   stopTracking({ angel: els.angelWrap, devil: els.devilWrap });
   els.stage.classList.remove("connected");
+  document.body.classList.remove("live"); // hide the controls again
   els.talkBtn.disabled = true;
   els.faceBtn.disabled = true;
   els.voiceBtn.disabled = true;
