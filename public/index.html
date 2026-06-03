@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shoulder Angels 😇😈</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Shoulder <span class="good">Angels</span> &amp; <span class="bad">Devils</span></h1>
+      <p class="tag">Ask out loud. They can see you. They never agree.</p>
+    </header>
+
+    <main id="stage" class="stage">
+      <!-- You, center stage -->
+      <video id="user-video" class="user-video" autoplay playsinline muted></video>
+
+      <!-- Good conscience, left shoulder -->
+      <figure id="angel" class="avatar angel">
+        <div class="halo"></div>
+        <video id="angel-video" autoplay playsinline></video>
+        <figcaption id="angel-caption" class="caption"></figcaption>
+        <span class="badge">😇</span>
+      </figure>
+
+      <!-- Bad conscience, right shoulder -->
+      <figure id="devil" class="avatar devil">
+        <div class="halo"></div>
+        <video id="devil-video" autoplay playsinline></video>
+        <figcaption id="devil-caption" class="caption"></figcaption>
+        <span class="badge">😈</span>
+      </figure>
+
+      <div id="you-said" class="you-said"></div>
+    </main>
+
+    <div class="controls">
+      <button id="connect" class="btn primary">Connect</button>
+      <button id="talk" class="btn talk" disabled>🎤 Hold to talk</button>
+      <input
+        id="text-input"
+        class="text-input"
+        type="text"
+        placeholder="…or type a question and hit Enter"
+        disabled
+      />
+    </div>
+    <p id="status" class="status"></p>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
