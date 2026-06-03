@@ -1,0 +1,17 @@
+{
+  "name": "shoulder-angels",
+  "version": "1.0.0",
+  "description": "Two AI shoulder angels (good + bad) that sit by your head, see you through the camera, and take turns answering your questions. D-ID avatars + ElevenLabs voices.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  },
+  "license": "MIT"
+}
