@@ -196,6 +196,49 @@ header h1 {
 }
 .avatar.speaking .caption { opacity: 1; transform: translateY(0); }
 
+/* ── Face-capture guide (Use my face) ── */
+.capture-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+.capture-overlay[hidden] { display: none; }
+.face-guide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30%;
+  aspect-ratio: 3 / 4;
+  transform: translate(-50%, -58%);
+  border: 3px dashed rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+}
+.capture-text {
+  position: absolute;
+  top: 16%;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-shadow: 0 2px 6px #000;
+}
+.capture-count {
+  font-size: 5rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 4px 16px #000;
+  animation: count-pop 0.8s ease-out;
+}
+@keyframes count-pop {
+  0% { transform: scale(1.6); opacity: 0.2; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
 .you-said {
   position: absolute;
   top: 14px;

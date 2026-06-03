@@ -23,6 +23,7 @@ const els = {
   textInput: document.getElementById("text-input"),
   status: document.getElementById("status"),
   youSaid: document.getElementById("you-said"),
+  captureOverlay: document.getElementById("capture-overlay"),
 };
 
 let angel, devil;
@@ -56,6 +57,52 @@ function captureFrame(w = 512) {
   canvas.height = h;
   canvas.getContext("2d").drawImage(v, 0, 0, w, h);
   return canvas.toDataURL("image/jpeg", 0.7);
+}
+
+// Grab a still frame (canvas) from the webcam — used as the face source so it
+// doesn't smear if the user moves during upload.
+function captureStill(w = 640) {
+  const v = els.userVideo;
+  const h = Math.round((v.videoHeight / v.videoWidth) * w);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d").drawImage(v, 0, 0, w, h);
+  return canvas;
+}
+
+// Show the alignment guide + 3-2-1 countdown, then capture a still at "0".
+function runCaptureCountdown() {
+  return new Promise((resolve) => {
+    const ov = els.captureOverlay;
+    const countEl = ov.querySelector(".capture-count");
+    ov.hidden = false;
+    let n = 3;
+    countEl.textContent = n;
+    countEl.style.animation = "none";
+    void countEl.offsetWidth; // restart pop animation
+    countEl.style.animation = "";
+
+    const step = () => {
+      n -= 1;
+      if (n > 0) {
+        countEl.textContent = n;
+        countEl.style.animation = "none";
+        void countEl.offsetWidth;
+        countEl.style.animation = "";
+        setTimeout(step, 800);
+      } else {
+        countEl.textContent = "📸";
+        const still = captureStill(640);
+        setTimeout(() => {
+          ov.hidden = true;
+          countEl.textContent = "";
+          resolve(still);
+        }, 300);
+      }
+    };
+    setTimeout(step, 800);
+  });
 }
 
 // ── Source faces with baked-in halo / horns ─────────────────────────────
@@ -94,11 +141,11 @@ async function decoratedSource(type, baseEl) {
 }
 
 // Build both avatars' source URLs (halo + horns baked in) for the current mode.
-async function prepareSources() {
+async function prepareSources(capturedFace) {
   await trackingReady; // need the pose model for head placement
   let angelBase, devilBase;
   if (usingMyFace) {
-    angelBase = devilBase = els.userVideo; // your live face, decorated two ways
+    angelBase = devilBase = capturedFace || els.userVideo; // your face, decorated two ways
   } else {
     [angelBase, devilBase] = await Promise.all([
       loadImage(presetImages.angel),
@@ -196,9 +243,16 @@ async function toggleMyFace() {
   const target = !usingMyFace;
 
   try {
-    setStatus(target ? "Cloning your face onto both of them…" : "Restoring their real faces…");
+    // Turning it on: guide the user to align + hold still, then grab a clean still.
+    let captured = null;
+    if (target) {
+      captured = await runCaptureCountdown();
+      setStatus("Cloning your face onto both of them…");
+    } else {
+      setStatus("Restoring their real faces…");
+    }
     usingMyFace = target; // prepareSources reads this
-    const sources = await prepareSources();
+    const sources = await prepareSources(captured);
 
     // Respawn both streams with the new faces.
     await Promise.allSettled([angel.disconnect(), devil.disconnect()]);

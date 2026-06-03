@@ -13,16 +13,32 @@ const PALETTE = {
 export async function decorateFace(imgSource, type) {
   const w = imgSource.naturalWidth || imgSource.videoWidth || imgSource.width;
   const h = imgSource.naturalHeight || imgSource.videoHeight || imgSource.height;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(imgSource, 0, 0, w, h);
 
   let head = await detectHead(imgSource);
   if (!head) head = { cx: w / 2, cy: h * 0.42, width: w * 0.34, topY: h * 0.16 };
 
-  drawRing(ctx, head, PALETTE[type] || PALETTE.angel);
+  // The ring sits above the crown; make sure there's room for it. If the head
+  // is jammed against the top of the image (common in tight portraits), pad
+  // headroom on top so the ring has somewhere to go instead of the face.
+  const need = head.width * 0.6;
+  const pad = Math.max(0, Math.ceil(need - head.topY));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h + pad;
+  const ctx = canvas.getContext("2d");
+
+  if (pad > 0) {
+    // Fill the new headroom with a soft, blurred stretch of the upper image so
+    // the ring rests on a plausible background rather than a hard cut.
+    ctx.save();
+    ctx.filter = "blur(30px)";
+    ctx.drawImage(imgSource, 0, 0, w, Math.max(1, Math.round(h * 0.35)), 0, 0, w, pad + Math.round(h * 0.15));
+    ctx.restore();
+  }
+  ctx.drawImage(imgSource, 0, pad, w, h);
+
+  drawRing(ctx, { cx: head.cx, width: head.width, topY: head.topY + pad }, PALETTE[type] || PALETTE.angel);
 
   return canvas.toDataURL("image/jpeg", 0.92);
 }
