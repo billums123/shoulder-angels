@@ -46,6 +46,15 @@ function setStatus(msg) {
   els.status.textContent = msg;
 }
 
+// Update a button's label (and optionally its duotone icon) without clobbering
+// the <i> icon the way textContent would.
+function setBtn(btn, label, iconClass) {
+  const lbl = btn.querySelector(".lbl");
+  if (lbl) lbl.textContent = label;
+  const icon = btn.querySelector("i");
+  if (icon && iconClass) icon.className = "fa-duotone " + iconClass;
+}
+
 // ── Camera ────────────────────────────────────────────────────────────
 async function startCamera() {
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -100,7 +109,7 @@ function runCaptureCountdown() {
         countEl.style.animation = "";
         setTimeout(step, 800);
       } else {
-        countEl.textContent = "📸";
+        countEl.innerHTML = '<i class="fa-duotone fa-camera"></i>';
         const still = captureStill(640);
         setTimeout(() => {
           ov.hidden = true;
@@ -138,7 +147,7 @@ async function recordVoiceSample() {
   promptEl.textContent = `“${VOICE_PROMPT}”`;
   ov.hidden = false;
   for (let s = VOICE_SECONDS; s > 0; s--) {
-    countEl.textContent = `🔴 ${s}s`;
+    countEl.innerHTML = `<i class="fa-duotone fa-circle" style="color:#ff5a4d"></i> ${s}s`;
     await new Promise((r) => setTimeout(r, 1000));
     if (!connected) break; // bail if disconnected mid-record
   }
@@ -167,7 +176,7 @@ async function cloneAndApply(blob) {
   }
   const { voice_id } = await res.json();
   voiceOverride = voice_id;
-  els.voiceBtn.textContent = "🎙️ Your voice ✓";
+  setBtn(els.voiceBtn, "Your voice", "fa-circle-check");
   els.voiceBtn.classList.add("active");
   setStatus("Now they speak in your voice. Ask them something!");
 }
@@ -297,7 +306,7 @@ async function connect() {
 
   connected = true;
   els.stage.classList.add("connected");
-  els.connectBtn.textContent = "Disconnect";
+  setBtn(els.connectBtn, "Disconnect", "fa-link-slash");
   els.connectBtn.disabled = false;
   els.talkBtn.disabled = false;
   els.faceBtn.disabled = false;
@@ -325,8 +334,8 @@ async function disconnect() {
   els.faceBtn.disabled = true;
   els.voiceBtn.disabled = true;
   els.textInput.disabled = true;
-  setStatus("Disconnected. Credits saved 💸");
-  els.connectBtn.textContent = "Connect";
+  setStatus("Disconnected. Credits saved.");
+  setBtn(els.connectBtn, "Summon them", "fa-wand-magic-sparkles");
   await Promise.allSettled([angel?.disconnect(), devil?.disconnect()]);
   const s = els.userVideo.srcObject;
   if (s) s.getTracks().forEach((t) => t.stop());
@@ -360,8 +369,9 @@ async function toggleMyFace() {
     devil = new DidAvatar("devil", els.devilVideo, sources.devil);
     await Promise.all([angel.connect(), devil.connect()]);
 
-    els.faceBtn.textContent = usingMyFace ? "↩ Reset faces" : "👤 Use my face";
-    setStatus(usingMyFace ? "Meet good-you and evil-you 😇😈" : "");
+    setBtn(els.faceBtn, usingMyFace ? "Reset faces" : "Use my face",
+      usingMyFace ? "fa-rotate-left" : "fa-face-viewfinder");
+    setStatus(usingMyFace ? "Meet good-you and evil-you." : "");
     swapped = true;
   } catch (e) {
     console.error(e);

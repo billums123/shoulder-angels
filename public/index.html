@@ -14,6 +14,9 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <!-- Font Awesome Pro kit (Duotone). Replace REPLACE_WITH_YOUR_KIT_ID with
+         your kit from https://fontawesome.com/kits (Pro account required). -->
+    <script src="https://kit.fontawesome.com/REPLACE_WITH_YOUR_KIT_ID.js" crossorigin="anonymous"></script>
     <!-- TensorFlow.js + MoveNet (pose detection) for shoulder tracking -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js"></script>
@@ -72,20 +75,28 @@
 
       <!-- Voice-record guide for "Use my voice" -->
       <div id="voice-overlay" class="capture-overlay" hidden>
-        <div class="capture-text">🎙️ Read this aloud, clearly:</div>
+        <div class="capture-text"><i class="fa-duotone fa-microphone-lines"></i> Read this aloud, clearly:</div>
         <div class="voice-prompt"></div>
         <div class="capture-count"></div>
       </div>
     </main>
 
     <div class="controls">
-      <button id="connect" class="btn primary">Summon them</button>
-      <button id="face" class="btn face" disabled>👤 Use my face</button>
-      <button id="voice" class="btn voice" disabled>🎙️ Use my voice</button>
-      <label class="btn upload" title="Upload a voice clip instead of recording">
-        📁<input id="voice-file" type="file" accept="audio/*" hidden />
+      <button id="connect" class="btn primary">
+        <i class="fa-duotone fa-wand-magic-sparkles"></i><span class="lbl">Summon them</span>
+      </button>
+      <button id="face" class="btn face" disabled>
+        <i class="fa-duotone fa-face-viewfinder"></i><span class="lbl">Use my face</span>
+      </button>
+      <button id="voice" class="btn voice" disabled>
+        <i class="fa-duotone fa-microphone-lines"></i><span class="lbl">Use my voice</span>
+      </button>
+      <label class="btn upload" title="Upload a voice clip instead of recording" aria-label="Upload a voice clip">
+        <i class="fa-duotone fa-file-audio"></i><input id="voice-file" type="file" accept="audio/*" hidden />
       </label>
-      <button id="talk" class="btn talk" disabled>🎤 Hold to talk</button>
+      <button id="talk" class="btn talk" disabled>
+        <i class="fa-duotone fa-microphone"></i><span class="lbl">Hold to talk</span>
+      </button>
       <input
         id="text-input"
         class="text-input"

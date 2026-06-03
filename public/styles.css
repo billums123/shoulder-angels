@@ -368,6 +368,7 @@ header { text-align: center; margin: 24px 16px 12px; }
   gap: 6px;
   box-shadow: 0 8px 22px -12px rgba(60, 40, 20, 0.6);
 }
+.btn i { font-size: 1.12em; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 .btn:not(:disabled):hover { filter: brightness(1.06); transform: translateY(-1px); }
 .btn:not(:disabled):active { transform: scale(0.97); }
