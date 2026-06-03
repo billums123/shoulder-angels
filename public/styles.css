@@ -76,10 +76,10 @@ body {
 header { text-align: center; margin: 24px 16px 12px; }
 .title { margin: 0; line-height: 0; }
 .logo {
-  width: clamp(140px, 20vw, 200px);
+  width: clamp(180px, 26vw, 280px);
   height: auto;
   /* transparent PNG → shape-following shadow (not a box) */
-  filter: drop-shadow(0 10px 18px rgba(90, 55, 20, 0.28));
+  filter: drop-shadow(0 12px 22px rgba(90, 55, 20, 0.28));
   animation: logo-float 5s ease-in-out infinite;
 }
 @keyframes logo-float {
@@ -90,7 +90,7 @@ header { text-align: center; margin: 24px 16px 12px; }
 /* ── Stage (clean framed screen) ── */
 .stage {
   position: relative;
-  width: min(92vw, 900px);
+  width: min(94vw, 1120px);
   aspect-ratio: 16 / 10;
   border-radius: 28px;
   overflow: hidden;
@@ -328,7 +328,7 @@ header { text-align: center; margin: 24px 16px 12px; }
   flex-wrap: wrap;
   justify-content: center;
   margin: 22px 0 6px;
-  width: min(92vw, 900px);
+  width: min(94vw, 1120px);
 }
 .btn {
   border: none;
@@ -400,3 +400,33 @@ header { text-align: center; margin: 24px 16px 12px; }
   letter-spacing: 0.2px;
 }
 .credits strong { color: var(--ink); }
+
+/* ── Mobile (portrait) ── */
+@media (max-width: 720px) {
+  header { margin: 14px 12px 6px; }
+  .logo { width: clamp(160px, 46vw, 240px); }
+
+  /* taller portrait stage uses the phone's vertical space + shows you bigger */
+  .stage { width: 94vw; aspect-ratio: 3 / 4; border-radius: 22px; }
+  .stage-frame { border-radius: 22px; box-shadow: inset 0 0 0 4px rgba(255,255,255,0.9), inset 12px 0 44px -28px var(--gold-glow), inset -12px 0 44px -28px var(--red-glow); }
+
+  .avatar { width: 31%; bottom: 3%; }
+  .badge { font-size: 1.4rem; }
+  .caption { width: auto; max-width: 58vw; font-size: 0.84rem; padding: 8px 11px; }
+  .you-said { font-size: 0.9rem; max-width: 88%; }
+
+  .controls { gap: 8px; margin-top: 16px; }
+  .btn { padding: 12px 14px; font-size: 0.92rem; flex: 1 1 auto; justify-content: center; }
+  .primary, .face, .voice { flex-basis: calc(50% - 4px); } /* two per row */
+  .upload { flex: 0 0 auto; }
+  .talk { flex-basis: 100%; min-width: 0; order: 9; padding: 16px; font-size: 1.05rem; }
+  .text-input { flex-basis: 100%; min-width: 0; order: 10; }
+
+  .realm { filter: blur(70px); }
+  .brand-watermark { width: 82vw; }
+  .credits { font-size: 0.72rem; padding: 0 16px; text-align: center; }
+}
+
+@media (max-width: 380px) {
+  .primary, .face, .voice { flex-basis: 100%; } /* one per row on tiny screens */
+}
