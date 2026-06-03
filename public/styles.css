@@ -126,12 +126,6 @@ header { text-align: center; margin: 24px 16px 12px; }
   color: #f4ece0;
 }
 .stage.connected .stage-empty { display: none; }
-.empty-faces {
-  font-size: clamp(2.6rem, 8vw, 4.2rem);
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
-  animation: logo-float 4s ease-in-out infinite;
-}
-.empty-title { margin: 0; font-weight: 700; font-size: clamp(1.1rem, 3vw, 1.6rem); }
 .empty-sub { margin: 0; font-size: 0.95rem; color: #c3b8ba; }
 .empty-sub strong { color: var(--gold); }
 .user-video {
