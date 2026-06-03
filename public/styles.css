@@ -141,7 +141,8 @@ header { text-align: center; margin: 24px 16px 12px; }
   justify-content: center;
   gap: 14px;
   color: #f4ece0;
-  background: radial-gradient(120% 90% at 50% 45%, rgba(22, 17, 28, 0.86), rgba(10, 8, 16, 0.95));
+  /* same opaque scrim as the idle state → seamless dark handoff, no camera flash */
+  background: radial-gradient(120% 90% at 50% 45%, rgba(22, 17, 28, 0.94), rgba(10, 8, 16, 0.98));
 }
 .stage-loader[hidden] { display: none; }
 .loader-text {
@@ -489,12 +490,11 @@ body.live #text-input { animation-delay: 0.26s; }
   100% { transform: scale(0.05); opacity: 0; }
 }
 
-/* Loader blooms in from the center where the button collapsed */
-.stage-loader:not([hidden]) { animation: loader-fade 0.3s ease both; }
-#loader-canvas { animation: loader-pop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.3) both; }
-@keyframes loader-fade { from { opacity: 0; } to { opacity: 1; } }
+/* Canvas blooms in from the center where the button collapsed (scrim is
+   already opaque, so only the comets animate in — no fade over the camera) */
+#loader-canvas { animation: loader-pop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.3) both; }
 @keyframes loader-pop {
-  from { transform: scale(0.25); opacity: 0; }
+  from { transform: scale(0.12); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 

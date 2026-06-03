@@ -286,15 +286,13 @@ async function connect() {
     await startCamera();
   } catch (e) {
     setStatus("Camera/mic permission needed. Allow access and retry.");
+    showLoader(false);
     els.connectBtn.classList.remove("summoning");
     els.connectBtn.disabled = false;
     return;
   }
 
-  // let the Summon button finish shrinking, then bloom into the loader
-  await new Promise((r) => setTimeout(r, 420));
-  showLoader(true);
-  setStatus(""); // the loader already shows the "Summoning…" label
+  // The loader is shown on the shrink's timeline by the click handler.
   let sources;
   try {
     sources = await prepareSources();
@@ -545,7 +543,14 @@ function stopListening() {
 els.connectBtn.addEventListener("click", () => {
   if (connected || els.connectBtn.disabled) return;
   els.connectBtn.disabled = true;
-  els.connectBtn.classList.add("summoning"); // shrink away, then bloom into loader
+  els.connectBtn.classList.add("summoning"); // shrink away…
+  // …then, on the shrink's own timeline (not the network's), bloom the loader.
+  setTimeout(() => {
+    if (!connected && els.connectBtn.classList.contains("summoning")) {
+      showLoader(true);
+      setStatus("");
+    }
+  }, 360);
   connect();
 });
 els.disconnectBtn.addEventListener("click", () => {
