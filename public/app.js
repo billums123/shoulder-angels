@@ -14,6 +14,8 @@ const els = {
   userVideo: document.getElementById("user-video"),
   angelVideo: document.getElementById("angel-video"),
   devilVideo: document.getElementById("devil-video"),
+  angelStill: document.getElementById("angel-still"),
+  devilStill: document.getElementById("devil-still"),
   angelWrap: document.getElementById("angel"),
   devilWrap: document.getElementById("devil"),
   angelCaption: document.getElementById("angel-caption"),
@@ -248,14 +250,18 @@ async function uploadDataUrl(dataUrl) {
   return (await res.json()).url;
 }
 
-// Decorate one face and upload it; returns a D-ID source URL, or null to let
-// the server fall back to the plain preset.
+// Decorate one face; returns { url, dataUrl } — url is the D-ID source (null on
+// failure → server falls back to the plain preset), dataUrl is the local still
+// shown in the orb until the live stream renders.
 async function decoratedSource(type, baseEl) {
+  let dataUrl = null;
   try {
-    return await uploadDataUrl(await decorateFace(baseEl, type));
+    dataUrl = await decorateFace(baseEl, type);
+    const url = await uploadDataUrl(dataUrl);
+    return { url, dataUrl };
   } catch (e) {
     console.warn(`decorate ${type} failed:`, e.message);
-    return null;
+    return { url: null, dataUrl };
   }
 }
 
@@ -271,11 +277,29 @@ async function prepareSources(capturedFace) {
       loadImage(presetImages.devil),
     ]);
   }
-  const [angelUrl, devilUrl] = await Promise.all([
+  const [angel, devil] = await Promise.all([
     decoratedSource("angel", angelBase),
     decoratedSource("devil", devilBase),
   ]);
-  return { angel: angelUrl, devil: devilUrl };
+  return { angel, devil }; // each: { url, dataUrl }
+}
+
+// Drop the decorated stills into the orbs (visible until the live video shows
+// a real face on first talk).
+function applyStills(sources) {
+  [["angel", els.angelStill], ["devil", els.devilStill]].forEach(([k, img]) => {
+    const d = sources[k]?.dataUrl;
+    if (d) {
+      img.src = d;
+      img.style.opacity = "1";
+    } else {
+      img.style.opacity = "0";
+    }
+  });
+}
+function revealLive(who) {
+  const img = who === "angel" ? els.angelStill : els.devilStill;
+  if (img) img.style.opacity = "0"; // fade still out → live video shows through
 }
 
 // ── Connect / disconnect ────────────────────────────────────────────────
@@ -298,11 +322,12 @@ async function connect() {
     sources = await prepareSources();
   } catch (e) {
     console.warn("source prep failed, using plain presets:", e.message);
-    sources = { angel: null, devil: null };
+    sources = { angel: {}, devil: {} };
   }
 
-  angel = new DidAvatar("angel", els.angelVideo, sources.angel);
-  devil = new DidAvatar("devil", els.devilVideo, sources.devil);
+  applyStills(sources); // show the face stills so the orbs aren't blank
+  angel = new DidAvatar("angel", els.angelVideo, sources.angel?.url);
+  devil = new DidAvatar("devil", els.devilVideo, sources.devil?.url);
   try {
     await Promise.all([angel.connect(), devil.connect()]);
   } catch (e) {
@@ -353,6 +378,8 @@ async function disconnect() {
   els.faceBtn.disabled = true;
   els.voiceBtn.disabled = true;
   els.textInput.disabled = true;
+  els.angelStill.style.opacity = "0";
+  els.devilStill.style.opacity = "0";
   setStatus("");
   await Promise.allSettled([angel?.disconnect(), devil?.disconnect()]);
   const s = els.userVideo.srcObject;
@@ -383,8 +410,9 @@ async function toggleMyFace() {
 
     // Respawn both streams with the new faces.
     await Promise.allSettled([angel.disconnect(), devil.disconnect()]);
-    angel = new DidAvatar("angel", els.angelVideo, sources.angel);
-    devil = new DidAvatar("devil", els.devilVideo, sources.devil);
+    applyStills(sources); // show new face stills during the respawn
+    angel = new DidAvatar("angel", els.angelVideo, sources.angel?.url);
+    devil = new DidAvatar("devil", els.devilVideo, sources.devil?.url);
     await Promise.all([angel.connect(), devil.connect()]);
 
     setBtn(els.faceBtn, usingMyFace ? "Reset faces" : "Use my face",
@@ -458,6 +486,7 @@ async function speakAs(who, line) {
   const avatar = who === "angel" ? angel : devil;
   caption.textContent = line;
   wrap.classList.add("speaking");
+  revealLive(who); // first talk → fade the still out to the live face
   try {
     await avatar.speak(line, voiceOverride);
   } finally {

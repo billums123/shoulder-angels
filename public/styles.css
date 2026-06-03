@@ -189,6 +189,21 @@ header { text-align: center; margin: 24px 16px 12px; }
 .avatar.angel { right: 3%; }
 .avatar.devil { left: 3%; }
 
+/* Decorated face still shown in the orb until the live stream renders a real
+   face (D-ID streams show blank idle frames until their first talk). */
+.orb-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: none;
+}
+
 @keyframes float-serene {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50%      { transform: translateY(-4px) rotate(-1.2deg); }
