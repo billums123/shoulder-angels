@@ -114,11 +114,10 @@ export function startTracking(video, stage, avatars, onPresence) {
     if (anchors) {
       lost = 0;
       found++;
-      // Display is mirrored: the person's RIGHT shoulder appears on the
-      // viewer's left. Angel sits on the left, devil on the right (matches the
-      // logo's angel-left / devil-right composition).
-      setTarget("angel", avatars.angel, anchors.right);
-      setTarget("devil", avatars.devil, anchors.left);
+      // Display is mirrored: the person's LEFT shoulder appears on the viewer's
+      // right. Angel sits on the right, devil on the left.
+      setTarget("angel", avatars.angel, anchors.left);
+      setTarget("devil", avatars.devil, anchors.right);
       if (!everSeen) {
         everSeen = true;
         present = true;

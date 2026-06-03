@@ -164,8 +164,8 @@ header { text-align: center; margin: 24px 16px 12px; }
   position: relative;
   z-index: 1;
 }
-.avatar.angel { left: 3%; }
-.avatar.devil { right: 3%; }
+.avatar.angel { right: 3%; }
+.avatar.devil { left: 3%; }
 
 @keyframes float-serene {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -218,15 +218,6 @@ header { text-align: center; margin: 24px 16px 12px; }
   mix-blend-mode: overlay;
 }
 
-.badge {
-  position: absolute;
-  top: -8px;
-  font-size: 1.7rem;
-  z-index: 4;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-}
-.angel .badge { left: -6px; }
-.devil .badge { right: -6px; }
 
 .avatar.speaking { transform: scale(1.12); filter: saturate(1.2) brightness(1.12); }
 .avatar.speaking .halo { opacity: 1 !important; animation: pulse 0.9s ease-in-out infinite; }
@@ -251,16 +242,16 @@ header { text-align: center; margin: 24px 16px 12px; }
   box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.4);
 }
 .angel .caption {
-  left: 0;
+  right: 0;
   background: #fff7e6;
   border: 1.5px solid var(--gold);
-  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
 }
 .devil .caption {
-  right: 0;
+  left: 0;
   background: #fdecea;
   border: 1.5px solid var(--red);
-  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 4px;
 }
 .avatar.speaking .caption { opacity: 1; transform: translateY(0); }
 
