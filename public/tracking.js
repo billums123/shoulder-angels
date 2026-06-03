@@ -62,15 +62,24 @@ export function startTracking(video, stage, avatars) {
     };
   };
 
+  // Filter each (noisy, ~10fps) detection into the target before gliding to it.
+  const setTarget = (key, el, anchor) => {
+    const raw = targetFor(el, anchor);
+    const prev = target[key];
+    target[key] = prev
+      ? { x: prev.x + (raw.x - prev.x) * 0.45, y: prev.y + (raw.y - prev.y) * 0.45 }
+      : raw;
+  };
+
   const glide = (el, key) => {
     const t = target[key];
     if (!t) return;
     const s = smooth[key] || (smooth[key] = { x: t.x, y: t.y });
-    s.x += (t.x - s.x) * 0.2; // EMA smoothing toward the latest target
-    s.y += (t.y - s.y) * 0.2;
+    s.x += (t.x - s.x) * 0.12; // gentle per-frame easing (smoother, slight lag)
+    s.y += (t.y - s.y) * 0.12;
     el.classList.add("tracked");
-    el.style.left = `${s.x - el.offsetWidth / 2}px`;
-    el.style.top = `${s.y - el.offsetHeight / 2}px`;
+    el.style.left = `${Math.round(s.x - el.offsetWidth / 2)}px`;
+    el.style.top = `${Math.round(s.y - el.offsetHeight / 2)}px`;
     el.style.right = "auto";
     el.style.bottom = "auto";
   };
@@ -101,8 +110,8 @@ export function startTracking(video, stage, avatars) {
       // Display is mirrored: the person's RIGHT shoulder appears on the
       // viewer's left. Angel sits on the left, devil on the right (matches the
       // logo's angel-left / devil-right composition).
-      target.angel = targetFor(avatars.angel, anchors.right);
-      target.devil = targetFor(avatars.devil, anchors.left);
+      setTarget("angel", avatars.angel, anchors.right);
+      setTarget("devil", avatars.devil, anchors.left);
     } else if (++lost === 12) {
       target.angel = target.devil = null;
       resetToCorners(avatars); // pose lost → drift back to the corners

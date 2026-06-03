@@ -284,8 +284,9 @@ header { text-align: center; margin: 24px 16px 12px; }
 .stage:not(.connected) .avatar { opacity: 0; pointer-events: none; }
 .avatar {
   opacity: 1;
-  transition: opacity 0.4s ease, transform 0.25s ease, filter 0.25s ease,
-    left 0.1s linear, top 0.1s linear;
+  /* position is eased every frame in JS; no CSS transition on left/top (it
+     would compound and cause stutter) */
+  transition: opacity 0.4s ease, transform 0.25s ease, filter 0.25s ease;
 }
 
 /* ── Capture / voice overlays (scrim over the video) ── */
