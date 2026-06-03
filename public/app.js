@@ -198,19 +198,20 @@ async function useMyVoice() {
   els.talkBtn.disabled = !connected;
 }
 
-async function uploadVoice(file) {
-  if (busy || !connected || !file) return;
-  busy = true;
-  els.voiceBtn.disabled = true;
-  try {
-    await cloneAndApply(file);
-  } catch (e) {
-    console.error(e);
-    setStatus("Voice upload failed: " + e.message);
-  }
-  busy = false;
-  els.voiceBtn.disabled = !connected;
-}
+// Voice upload temporarily disabled
+// async function uploadVoice(file) {
+//   if (busy || !connected || !file) return;
+//   busy = true;
+//   els.voiceBtn.disabled = true;
+//   try {
+//     await cloneAndApply(file);
+//   } catch (e) {
+//     console.error(e);
+//     setStatus("Voice upload failed: " + e.message);
+//   }
+//   busy = false;
+//   els.voiceBtn.disabled = !connected;
+// }
 
 // ── Source faces with baked-in halo / horns ─────────────────────────────
 function loadImage(url) {
@@ -527,11 +528,12 @@ els.connectBtn.addEventListener("click", () =>
 );
 els.faceBtn.addEventListener("click", toggleMyFace);
 els.voiceBtn.addEventListener("click", useMyVoice);
-els.voiceFile.addEventListener("change", (e) => {
-  const f = e.target.files?.[0];
-  if (f) uploadVoice(f);
-  e.target.value = "";
-});
+// Voice upload temporarily disabled
+// els.voiceFile.addEventListener("change", (e) => {
+//   const f = e.target.files?.[0];
+//   if (f) uploadVoice(f);
+//   e.target.value = "";
+// });
 
 // Don't leak D-ID sessions on reload/close — tear streams down on the way out.
 window.addEventListener("pagehide", () => {
