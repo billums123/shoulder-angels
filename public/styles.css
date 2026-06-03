@@ -47,19 +47,6 @@ body {
     radial-gradient(120% 90% at 100% 30%, rgba(127, 176, 255, 0.4), transparent 70%),
     linear-gradient(200deg, var(--heaven-1), #0b0d1c 80%);
 }
-.seam {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 2px;
-  transform: translateX(-50%);
-  z-index: -1;
-  background: linear-gradient(to bottom, transparent, rgba(255, 220, 150, 0.5), rgba(255, 120, 120, 0.5), transparent);
-  filter: blur(0.5px);
-  pointer-events: none;
-}
-
 /* rising embers on the hell side */
 .ember {
   position: absolute;
