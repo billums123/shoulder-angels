@@ -1,13 +1,14 @@
 :root {
-  --gold: #ffd76b;
-  --gold-glow: #ffb000;
-  --red: #ff5a5a;
-  --red-glow: #c81e1e;
-  --heaven-1: #2a3a6b;
-  --heaven-2: #7fb0ff;
-  --hell-1: #3a0a0a;
-  --hell-2: #b3261e;
-  --ink: #f4f1ea;
+  --bg: #f1e8da;
+  --bg-2: #fcf8f1;
+  --card: #ffffff;
+  --ink: #322b39;
+  --muted: #7a7080;
+  --gold: #efa83a;
+  --gold-glow: #ffb52e;
+  --red: #db3b2f;
+  --red-glow: #ff5a4d;
+  --line: #e3d8c8;
 }
 
 * { box-sizing: border-box; }
@@ -15,95 +16,47 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #0a0712;
   color: var(--ink);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Poppins", system-ui, -apple-system, sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow-x: hidden;
   position: relative;
+  background:
+    radial-gradient(60% 55% at 0% 5%, rgba(255, 197, 92, 0.30), transparent 55%),
+    radial-gradient(60% 60% at 100% 100%, rgba(214, 59, 47, 0.18), transparent 55%),
+    radial-gradient(45% 45% at 100% 0%, rgba(90, 70, 110, 0.10), transparent 60%),
+    linear-gradient(165deg, var(--bg-2), var(--bg));
 }
 
-/* ── Ambient realms (cheap transform/opacity animations only) ── */
+/* ── Soft drifting ambient blobs (angel-gold left, devil-red right) ── */
 .realm {
   position: fixed;
-  top: 0;
-  bottom: 0;
-  width: 52%;
   z-index: -2;
   pointer-events: none;
-  overflow: hidden;
-}
-.realm.hell {
-  left: 0;
-  background:
-    radial-gradient(120% 90% at 0% 60%, rgba(179, 38, 30, 0.55), transparent 70%),
-    linear-gradient(160deg, var(--hell-1), #120307 80%);
+  border-radius: 50%;
+  filter: blur(90px);
 }
 .realm.heaven {
-  right: 0;
-  background:
-    radial-gradient(120% 90% at 100% 30%, rgba(127, 176, 255, 0.4), transparent 70%),
-    linear-gradient(200deg, var(--heaven-1), #0b0d1c 80%);
+  left: -12%;
+  top: -12%;
+  width: 52vw;
+  height: 52vw;
+  background: radial-gradient(circle, rgba(255, 199, 110, 0.55), transparent 70%);
+  animation: blob 19s ease-in-out infinite;
 }
-/* rising embers on the hell side */
-.ember {
-  position: absolute;
-  bottom: -10px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #ffd08a, #ff5a2a 60%, transparent);
-  opacity: 0;
-  animation: rise 7s ease-in infinite;
+.realm.hell {
+  right: -14%;
+  bottom: -14%;
+  width: 52vw;
+  height: 52vw;
+  background: radial-gradient(circle, rgba(219, 59, 47, 0.4), transparent 70%);
+  animation: blob 24s ease-in-out infinite reverse;
 }
-.ember:nth-child(1) { left: 8%; animation-delay: 0s; }
-.ember:nth-child(2) { left: 20%; animation-delay: 1.4s; }
-.ember:nth-child(3) { left: 33%; animation-delay: 2.8s; transform: scale(0.7); }
-.ember:nth-child(4) { left: 14%; animation-delay: 4s; transform: scale(1.3); }
-.ember:nth-child(5) { left: 28%; animation-delay: 5.2s; transform: scale(0.6); }
-.ember:nth-child(6) { left: 6%; animation-delay: 6s; }
-@keyframes rise {
-  0% { transform: translateY(0) scale(1); opacity: 0; }
-  15% { opacity: 0.9; }
-  100% { transform: translateY(-85vh) scale(0.4); opacity: 0; }
-}
-
-/* drifting clouds on the heaven side */
-.cloud {
-  position: absolute;
-  width: 160px;
-  height: 50px;
-  border-radius: 50px;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.18), transparent);
-  filter: blur(6px);
-  animation: drift 26s linear infinite;
-}
-.cloud:nth-child(1) { top: 18%; right: -160px; animation-delay: 0s; }
-.cloud:nth-child(2) { top: 44%; right: -160px; animation-delay: -9s; transform: scale(1.4); }
-.cloud:nth-child(3) { top: 70%; right: -160px; animation-delay: -17s; transform: scale(0.8); }
-@keyframes drift {
-  0% { transform: translateX(0); opacity: 0; }
-  12%, 88% { opacity: 0.8; }
-  100% { transform: translateX(-58vw); opacity: 0; }
-}
-
-/* ── Header (logo) ── */
-header { text-align: center; margin: 22px 16px 12px; }
-.title { margin: 0; line-height: 0; }
-.logo {
-  width: clamp(116px, 17vw, 164px);
-  height: auto;
-  border-radius: 24px;
-  box-shadow:
-    0 12px 40px -10px rgba(0, 0, 0, 0.7),
-    0 0 34px -6px rgba(255, 160, 80, 0.35);
-  animation: logo-float 5s ease-in-out infinite;
-}
-@keyframes logo-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(4%, 3%) scale(1.08); }
 }
 
 /* faint brand mark behind everything */
@@ -111,37 +64,52 @@ header { text-align: center; margin: 22px 16px 12px; }
   position: fixed;
   top: 50%;
   left: 50%;
-  width: min(64vw, 560px);
+  width: min(60vw, 540px);
   height: auto;
   transform: translate(-50%, -50%);
-  opacity: 0.045;
+  opacity: 0.05;
   z-index: -1;
   pointer-events: none;
 }
 
-/* ── Stage (ornate portal) ── */
+/* ── Header (logo) ── */
+header { text-align: center; margin: 24px 16px 12px; }
+.title { margin: 0; line-height: 0; }
+.logo {
+  width: clamp(118px, 16vw, 162px);
+  height: auto;
+  border-radius: 26px;
+  box-shadow: 0 16px 44px -14px rgba(90, 55, 20, 0.4);
+  animation: logo-float 5s ease-in-out infinite;
+}
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── Stage (clean framed screen) ── */
 .stage {
   position: relative;
   width: min(92vw, 900px);
   aspect-ratio: 16 / 10;
-  border-radius: 26px;
+  border-radius: 28px;
   overflow: hidden;
-  background: #000;
+  background: #0c0a10;
   box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 34px 80px -26px rgba(70, 45, 25, 0.5),
+    0 4px 0 rgba(255, 255, 255, 0.5) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.7);
 }
 .stage-frame {
   position: absolute;
   inset: 0;
   z-index: 5;
   pointer-events: none;
-  border-radius: 26px;
-  /* gold-on-the-right, ember-on-the-left rim of light */
+  border-radius: 28px;
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
-    inset 14px 0 60px -30px var(--red-glow),
-    inset -14px 0 60px -30px var(--gold-glow);
+    inset 0 0 0 6px rgba(255, 255, 255, 0.9),
+    inset 16px 0 60px -34px var(--gold-glow),
+    inset -16px 0 60px -34px var(--red-glow);
 }
 .user-video {
   position: absolute;
@@ -152,7 +120,7 @@ header { text-align: center; margin: 22px 16px 12px; }
   transform: scaleX(-1); /* mirror like a selfie */
 }
 
-/* ── Shoulder avatars ── */
+/* ── Shoulder avatars (angel-left, devil-right — matches the logo) ── */
 .avatar {
   position: absolute;
   bottom: 4%;
@@ -162,7 +130,7 @@ header { text-align: center; margin: 22px 16px 12px; }
   margin: 0;
   border-radius: 50%;
   z-index: 3;
-  filter: saturate(0.95) brightness(0.9);
+  filter: saturate(0.97) brightness(0.94);
 }
 .avatar video {
   width: 100%;
@@ -173,10 +141,9 @@ header { text-align: center; margin: 22px 16px 12px; }
   position: relative;
   z-index: 1;
 }
-.avatar.angel { right: 3%; }
-.avatar.devil { left: 3%; }
+.avatar.angel { left: 3%; }
+.avatar.devil { right: 3%; }
 
-/* Idle liveliness — gentle motion so they feel alive between turns */
 @keyframes float-serene {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50%      { transform: translateY(-4px) rotate(-1.2deg); }
@@ -188,18 +155,18 @@ header { text-align: center; margin: 22px 16px 12px; }
   70%      { transform: translateY(-3px) rotate(1deg); }
 }
 .avatar.angel video {
-  filter: brightness(1.12) saturate(1.06) contrast(0.98);
+  filter: brightness(1.1) saturate(1.05) contrast(0.98);
   animation: float-serene 6s ease-in-out infinite;
 }
 .avatar.devil video {
-  filter: brightness(0.97) saturate(1.18) contrast(1.08);
+  filter: brightness(0.97) saturate(1.16) contrast(1.07);
   animation: float-restless 4.5s ease-in-out infinite;
 }
 
-@keyframes halo-breathe { 0%, 100% { opacity: 0.42; } 50% { opacity: 0.68; } }
+@keyframes halo-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.72; } }
 @keyframes halo-flicker {
-  0%, 100% { opacity: 0.5; } 25% { opacity: 0.72; } 40% { opacity: 0.44; }
-  60% { opacity: 0.8; } 80% { opacity: 0.55; }
+  0%, 100% { opacity: 0.5; } 25% { opacity: 0.74; } 40% { opacity: 0.46; }
+  60% { opacity: 0.82; } 80% { opacity: 0.56; }
 }
 .halo {
   position: absolute;
@@ -208,10 +175,9 @@ header { text-align: center; margin: 22px 16px 12px; }
   z-index: 0;
   opacity: 0.55;
 }
-.angel .halo { box-shadow: 0 0 50px 12px var(--gold-glow); border: 2px solid var(--gold); animation: halo-breathe 5s ease-in-out infinite; }
-.devil .halo { box-shadow: 0 0 50px 12px var(--red-glow); border: 2px solid var(--red); animation: halo-flicker 2.2s ease-in-out infinite; }
+.angel .halo { box-shadow: 0 0 46px 12px var(--gold-glow); border: 2px solid var(--gold); animation: halo-breathe 5s ease-in-out infinite; }
+.devil .halo { box-shadow: 0 0 46px 12px var(--red-glow); border: 2px solid var(--red); animation: halo-flicker 2.2s ease-in-out infinite; }
 
-/* color wash so each face takes on its character (works on any face) */
 .avatar::before {
   content: "";
   position: absolute;
@@ -225,7 +191,7 @@ header { text-align: center; margin: 22px 16px 12px; }
   mix-blend-mode: soft-light;
 }
 .avatar.devil::before {
-  background: radial-gradient(circle at 50% 58%, rgba(255, 40, 40, 0.38), rgba(90, 0, 0, 0.22) 74%, transparent);
+  background: radial-gradient(circle at 50% 58%, rgba(255, 40, 40, 0.36), rgba(90, 0, 0, 0.2) 74%, transparent);
   mix-blend-mode: overlay;
 }
 
@@ -234,17 +200,16 @@ header { text-align: center; margin: 22px 16px 12px; }
   top: -8px;
   font-size: 1.7rem;
   z-index: 4;
-  filter: drop-shadow(0 2px 4px #000);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
-.angel .badge { right: -6px; }
-.devil .badge { left: -6px; }
+.angel .badge { left: -6px; }
+.devil .badge { right: -6px; }
 
-/* speaking state */
 .avatar.speaking { transform: scale(1.12); filter: saturate(1.2) brightness(1.12); }
 .avatar.speaking .halo { opacity: 1 !important; animation: pulse 0.9s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 
-/* captions — angel = celestial, devil = ember */
+/* captions */
 .caption {
   position: absolute;
   bottom: 104%;
@@ -252,25 +217,27 @@ header { text-align: center; margin: 22px 16px 12px; }
   max-width: 46vw;
   padding: 10px 14px;
   border-radius: 16px;
-  font-size: 0.95rem;
-  line-height: 1.32;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.34;
+  color: var(--ink);
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
-  backdrop-filter: blur(7px);
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.4);
 }
 .angel .caption {
-  right: 0;
-  background: rgba(255, 215, 107, 0.18);
-  border: 1px solid var(--gold);
-  border-bottom-right-radius: 4px;
+  left: 0;
+  background: #fff7e6;
+  border: 1.5px solid var(--gold);
+  border-bottom-left-radius: 4px;
 }
 .devil .caption {
-  left: 0;
-  background: rgba(255, 90, 90, 0.18);
-  border: 1px solid var(--red);
-  border-bottom-left-radius: 4px;
+  right: 0;
+  background: #fdecea;
+  border: 1.5px solid var(--red);
+  border-bottom-right-radius: 4px;
 }
 .avatar.speaking .caption { opacity: 1; transform: translateY(0); }
 
@@ -281,15 +248,16 @@ header { text-align: center; margin: 22px 16px 12px; }
   transform: translateX(-50%);
   max-width: 80%;
   text-align: center;
-  font-family: "Caveat", cursive;
-  font-size: 1.35rem;
-  padding: 4px 16px;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 6px 16px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.45);
   z-index: 4;
 }
 
-/* avatars hidden until connected; smooth tracking moves */
 .stage:not(.connected) .avatar { opacity: 0; pointer-events: none; }
 .avatar {
   opacity: 1;
@@ -297,7 +265,7 @@ header { text-align: center; margin: 22px 16px 12px; }
     left 0.1s linear, top 0.1s linear;
 }
 
-/* ── Capture / voice overlays ── */
+/* ── Capture / voice overlays (scrim over the video) ── */
 .capture-overlay {
   position: absolute;
   inset: 0;
@@ -307,8 +275,9 @@ header { text-align: center; margin: 22px 16px 12px; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(18, 14, 22, 0.5);
   backdrop-filter: blur(2px);
+  color: #fff;
 }
 .capture-overlay[hidden] { display: none; }
 .face-guide {
@@ -331,17 +300,17 @@ header { text-align: center; margin: 22px 16px 12px; }
   padding: 0 16px;
 }
 .voice-prompt {
-  max-width: 70%;
-  font-family: "Caveat", cursive;
-  font-size: 1.5rem;
-  line-height: 1.3;
-  color: var(--gold);
+  max-width: 72%;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.35;
+  color: #ffd98a;
   text-shadow: 0 2px 8px #000;
 }
 .capture-count {
   position: absolute;
   bottom: 12%;
-  font-size: 3.4rem;
+  font-size: 3.2rem;
   font-weight: 800;
   line-height: 1;
   text-shadow: 0 4px 16px #000;
@@ -358,47 +327,45 @@ header { text-align: center; margin: 22px 16px 12px; }
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
-  margin: 20px 0 6px;
+  margin: 22px 0 6px;
   width: min(92vw, 900px);
 }
 .btn {
   border: none;
   border-radius: 14px;
   padding: 12px 20px;
-  font-size: 0.98rem;
-  font-weight: 700;
+  font-size: 0.96rem;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  color: #1a1200;
+  color: #fff;
   transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  box-shadow: 0 8px 22px -12px rgba(60, 40, 20, 0.6);
 }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn:not(:disabled):hover { filter: brightness(1.08); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.btn:not(:disabled):hover { filter: brightness(1.06); transform: translateY(-1px); }
 .btn:not(:disabled):active { transform: scale(0.97); }
-.primary {
-  background: linear-gradient(135deg, var(--gold), #ff8a3d);
-  box-shadow: 0 6px 20px -6px var(--gold-glow);
-}
-.face { background: linear-gradient(135deg, #2bd4c4, #2b8fff); color: #04181a; }
-.voice { background: linear-gradient(135deg, #c08bff, #7a5cff); color: #fff; }
-.voice.active { background: linear-gradient(135deg, #4ad991, #1f9d57); color: #04180f; }
+.primary { background: linear-gradient(135deg, var(--gold), #ff8a3d); color: #3a2400; }
+.face { background: linear-gradient(135deg, #6f7cb0, #4f5e95); }
+.voice { background: linear-gradient(135deg, var(--red), #ff6a4d); }
+.voice.active { background: linear-gradient(135deg, #46cd8b, #1f9d57); }
 .upload {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card);
   color: var(--ink);
-  font-size: 1.2rem;
-  padding: 12px 14px;
+  font-size: 1.15rem;
+  padding: 11px 14px;
+  border: 1.5px solid var(--line);
 }
 .talk {
-  background: linear-gradient(135deg, #6b7bff, #9b5cff);
+  background: linear-gradient(135deg, #4a4150, #2c2632);
   color: #fff;
   flex: 1;
   min-width: 180px;
   user-select: none;
   touch-action: none;
-  box-shadow: 0 6px 20px -6px #7a5cff;
 }
 .talk.listening {
   background: linear-gradient(135deg, var(--red), #ff8a3d);
@@ -409,26 +376,27 @@ header { text-align: center; margin: 22px 16px 12px; }
   min-width: 200px;
   padding: 12px 16px;
   border-radius: 14px;
-  border: 1px solid #333;
-  background: rgba(20, 21, 31, 0.85);
-  color: #fff;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
   font-size: 1rem;
   font-family: inherit;
 }
-.text-input::placeholder { color: #8a8a99; }
+.text-input::placeholder { color: var(--muted); }
 
 .status {
   min-height: 1.2em;
-  opacity: 0.85;
-  font-size: 0.97rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
   text-align: center;
-  margin: 4px 16px 8px;
+  margin: 6px 16px 8px;
 }
 .credits {
   margin: auto 0 18px;
   padding-top: 10px;
   font-size: 0.8rem;
-  opacity: 0.5;
-  letter-spacing: 0.3px;
+  color: var(--muted);
+  letter-spacing: 0.2px;
 }
-.credits strong { color: var(--ink); opacity: 0.9; }
+.credits strong { color: var(--ink); }

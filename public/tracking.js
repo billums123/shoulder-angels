@@ -98,10 +98,11 @@ export function startTracking(video, stage, avatars) {
     const anchors = shoulderAnchors(poses[0]);
     if (anchors) {
       lost = 0;
-      // Display is mirrored: the person's LEFT shoulder appears on the viewer's
-      // right. Angel sits on the right (heaven side), devil on the left (hell).
-      target.angel = targetFor(avatars.angel, anchors.left);
-      target.devil = targetFor(avatars.devil, anchors.right);
+      // Display is mirrored: the person's RIGHT shoulder appears on the
+      // viewer's left. Angel sits on the left, devil on the right (matches the
+      // logo's angel-left / devil-right composition).
+      target.angel = targetFor(avatars.angel, anchors.right);
+      target.devil = targetFor(avatars.devil, anchors.left);
     } else if (++lost === 12) {
       target.angel = target.devil = null;
       resetToCorners(avatars); // pose lost → drift back to the corners
