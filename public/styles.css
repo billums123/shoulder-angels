@@ -89,35 +89,34 @@ body {
   100% { transform: translateX(-58vw); opacity: 0; }
 }
 
-/* ── Header ── */
-header { text-align: center; margin: 28px 16px 14px; }
-.title {
-  margin: 0;
-  display: flex;
-  gap: 0.35em;
-  justify-content: center;
-  align-items: center;
+/* ── Header (logo) ── */
+header { text-align: center; margin: 22px 16px 12px; }
+.title { margin: 0; line-height: 0; }
+.logo {
+  width: clamp(116px, 17vw, 164px);
+  height: auto;
+  border-radius: 24px;
+  box-shadow:
+    0 12px 40px -10px rgba(0, 0, 0, 0.7),
+    0 0 34px -6px rgba(255, 160, 80, 0.35);
+  animation: logo-float 5s ease-in-out infinite;
 }
-.title .word {
-  font-family: "Cinzel", serif;
-  font-weight: 800;
-  font-size: clamp(2.1rem, 7vw, 4rem);
-  letter-spacing: 3px;
-  background: linear-gradient(95deg, #ff4d4d 0%, #ff8a3d 40%, #ffd76b 72%, #fff6d4 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 20px rgba(255, 140, 60, 0.45));
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
-.title .flank {
-  font-size: clamp(1.7rem, 5vw, 3rem);
-  filter: drop-shadow(0 2px 7px #000);
-  animation: flank-bob 3.6s ease-in-out infinite;
-}
-.title .flank.angel { animation-delay: -1.8s; }
-@keyframes flank-bob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-5px) rotate(4deg); }
+
+/* faint brand mark behind everything */
+.brand-watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(64vw, 560px);
+  height: auto;
+  transform: translate(-50%, -50%);
+  opacity: 0.045;
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* ── Stage (ornate portal) ── */
