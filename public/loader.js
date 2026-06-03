@@ -1,19 +1,48 @@
-// Themed canvas loader shown while summoning: a gold (angel) and a red (devil)
-// comet chase each other around a ring with glowing trails, over a pulsing core.
+// Themed summoning loader: a gold (angel) and a red (devil) comet chase each
+// other around a ring. Drawn in a Web Worker via OffscreenCanvas so it keeps
+// rotating smoothly even while the main thread is busy connecting; falls back
+// to a main-thread rAF loop where OffscreenCanvas isn't available.
+const SIZE = 184;
+
+let worker = null;
+let transferred = false;
 let rafId = null;
 
 export function startLoader(canvas) {
-  stopLoader();
-  const ctx = canvas.getContext("2d");
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const size = 184;
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  canvas.style.width = canvas.style.height = `${size}px`;
-  ctx.scale(dpr, dpr);
+  canvas.style.width = `${SIZE}px`;
+  canvas.style.height = `${SIZE}px`;
 
-  const w = size;
-  const h = size;
+  if (typeof canvas.transferControlToOffscreen === "function") {
+    if (!worker) worker = new Worker("loader-worker.js");
+    if (!transferred) {
+      const off = canvas.transferControlToOffscreen();
+      transferred = true;
+      worker.postMessage({ type: "init", canvas: off, size: SIZE, dpr }, [off]);
+    }
+    worker.postMessage({ type: "start" });
+  } else {
+    startMainLoop(canvas, dpr);
+  }
+}
+
+export function stopLoader() {
+  if (worker) worker.postMessage({ type: "stop" });
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+}
+
+// ── Fallback: main-thread rAF loop ──────────────────────────────────────
+function startMainLoop(canvas, dpr) {
+  if (rafId) cancelAnimationFrame(rafId);
+  const ctx = canvas.getContext("2d");
+  canvas.width = SIZE * dpr;
+  canvas.height = SIZE * dpr;
+  ctx.scale(dpr, dpr);
+  const w = SIZE;
+  const h = SIZE;
   const cx = w / 2;
   const cy = h / 2;
   const R = w * 0.3;
@@ -31,21 +60,15 @@ export function startLoader(canvas) {
     ctx.fill();
     ctx.restore();
   };
-
-  const comet = (ang, c) => {
+  const comet = (angle, c) => {
     const T = 20;
     for (let i = T; i >= 0; i--) {
-      const a = ang - i * 0.1;
-      const x = cx + Math.cos(a) * R;
-      const y = cy + Math.sin(a) * R;
-      const f = 1 - i / T; // head brightest
-      dot(x, y, 1.4 + 4.2 * f, c, 0.9 * f, 16 * f);
+      const a = angle - i * 0.1;
+      const f = 1 - i / T;
+      dot(cx + Math.cos(a) * R, cy + Math.sin(a) * R, 1.4 + 4.2 * f, c, 0.9 * f, 16 * f);
     }
   };
 
-  // Advance by a per-frame delta (clamped) rather than absolute elapsed time, so
-  // a main-thread stall during summoning pauses the comets and resumes smoothly
-  // instead of teleporting them forward.
   let ang = 0;
   let pulse = 0;
   let last = null;
@@ -53,7 +76,7 @@ export function startLoader(canvas) {
     if (last === null) last = ts;
     let dt = ts - last;
     last = ts;
-    if (dt > 60) dt = 16; // a stall shouldn't jump the rotation
+    if (dt > 60) dt = 16;
     ang += dt * 0.0028;
     pulse += dt * 0.004;
     ctx.clearRect(0, 0, w, h);
@@ -64,9 +87,4 @@ export function startLoader(canvas) {
     rafId = requestAnimationFrame(frame);
   };
   rafId = requestAnimationFrame(frame);
-}
-
-export function stopLoader() {
-  if (rafId) cancelAnimationFrame(rafId);
-  rafId = null;
 }
