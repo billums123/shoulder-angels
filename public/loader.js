@@ -43,15 +43,23 @@ export function startLoader(canvas) {
     }
   };
 
-  let start = null;
+  // Advance by a per-frame delta (clamped) rather than absolute elapsed time, so
+  // a main-thread stall during summoning pauses the comets and resumes smoothly
+  // instead of teleporting them forward.
+  let ang = 0;
+  let pulse = 0;
+  let last = null;
   const frame = (ts) => {
-    if (start === null) start = ts;
-    const t = ts - start;
+    if (last === null) last = ts;
+    let dt = ts - last;
+    last = ts;
+    if (dt > 60) dt = 16; // a stall shouldn't jump the rotation
+    ang += dt * 0.0028;
+    pulse += dt * 0.004;
     ctx.clearRect(0, 0, w, h);
-    const ang = t * 0.0028;
     comet(ang, GOLD);
     comet(ang + Math.PI, RED);
-    const p = 0.5 + 0.5 * Math.sin(t * 0.004);
+    const p = 0.5 + 0.5 * Math.sin(pulse);
     dot(cx, cy, 5 + 4 * p, [255, 226, 170], 0.3 + 0.3 * p, 26);
     rafId = requestAnimationFrame(frame);
   };
