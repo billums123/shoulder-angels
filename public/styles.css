@@ -501,7 +501,6 @@ body.live #text-input { animation-delay: 0.26s; }
   .stage-frame { border-radius: 22px; box-shadow: inset 0 0 0 4px rgba(255,255,255,0.9), inset 12px 0 44px -28px var(--gold-glow), inset -12px 0 44px -28px var(--red-glow); }
 
   .avatar { width: 31%; bottom: 3%; }
-  .badge { font-size: 1.4rem; }
   .caption { width: auto; max-width: 58vw; font-size: 0.84rem; padding: 8px 11px; }
   .you-said { font-size: 0.9rem; max-width: 88%; }
 
