@@ -63,10 +63,11 @@ export function startTracking(video, stage, avatars, onPresence) {
     const m = mapToStage(point.x, point.y, video, stage);
     const halfW = el.offsetWidth / 2;
     const halfH = el.offsetHeight / 2;
-    // Perch: lift the orb so its lower edge rests at the shoulder line, and
-    // shift it outward toward the arm (away from the head/neck).
-    const x = m.x + outward * halfW * 0.5;
-    const y = m.y - halfH * 0.6;
+    // Perch the orb ON TOP of the shoulder, up beside the head (classic
+    // shoulder-angel look): lift it nearly a full radius so its lower edge sits
+    // at the shoulder line, and push it outward to clear the neck/face.
+    const x = m.x + outward * halfW * 0.6;
+    const y = m.y - halfH * 0.9;
     // Clamp to the stage — shoulders are often near/below the bottom edge in
     // tight webcam framing, and we still want the avatar fully visible.
     return {

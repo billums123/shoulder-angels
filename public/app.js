@@ -653,11 +653,11 @@ async function finishRecording(blob) {
     }
     const { text } = await res.json();
     const t = (text || "").trim();
-    if (t) ask(t);
-    else {
-      els.youSaid.textContent = "";
-      setStatus("Didn't catch that — hold and speak, or type.");
-    }
+    els.youSaid.textContent = "";
+    // Words → answer them. No words but you held the button → react to what they
+    // SEE, so silent gags (finger in your nose, holding something up) still get
+    // a reaction without you having to ask anything.
+    ask(t, t ? {} : { silentUser: true });
   } catch (e) {
     setStatus("Transcription failed: " + e.message);
     els.youSaid.textContent = "";
