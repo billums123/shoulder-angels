@@ -136,7 +136,7 @@ export class DidAvatar {
   }
 
   // ── internals ──
-  async _createStream(tries = 4) {
+  async _createStream(tries = 6) {
     for (let i = 0; i < tries; i++) {
       try {
         return await this._post("/api/did/streams", {
@@ -145,7 +145,10 @@ export class DidAvatar {
         });
       } catch (e) {
         if (/Max user sessions/.test(e.message) && i < tries - 1) {
-          await new Promise((r) => setTimeout(r, 2000));
+          // A just-closed session frees its slot ~10-30s later (D-ID side).
+          // Back off and keep trying so connect auto-heals instead of hard-
+          // failing: ~2s, 3s, 4s, 5s, 6s ≈ 20s total before giving up.
+          await new Promise((r) => setTimeout(r, 2000 + i * 1000));
           continue;
         }
         throw e;
