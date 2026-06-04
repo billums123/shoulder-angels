@@ -246,6 +246,16 @@ app.delete("/api/did/streams/:id", async (req, res) => {
   res.status(ok ? 200 : status).json(data);
 });
 
+// sendBeacon-friendly teardown: sendBeacon only supports POST, so on tab close
+// the client beacons here to reliably free the D-ID stream/session slot.
+app.post("/api/did/streams/:id/close", async (req, res) => {
+  const { ok, status, data } = await didFetch(
+    `/talks/streams/${req.params.id}`,
+    { method: "DELETE", body: req.body },
+  );
+  res.status(ok ? 200 : status).json(data);
+});
+
 // ── The brain: OpenAI sees you + writes both characters' turn ───────────
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 

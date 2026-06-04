@@ -110,12 +110,25 @@ export class DidAvatar {
   // would otherwise pile up and trigger "Max user sessions reached".
   beaconClose() {
     if (!this.streamId) return;
+    const body = JSON.stringify({ session_id: this.sessionId });
+    // sendBeacon is the most reliable transport during tab close/unload (the
+    // browser guarantees delivery), but it's POST-only — hit the POST teardown
+    // route. Fall back to a keepalive DELETE if sendBeacon is unavailable.
+    try {
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon &&
+          navigator.sendBeacon(`/api/did/streams/${this.streamId}/close`, blob)) {
+        return;
+      }
+    } catch {
+      /* fall through to keepalive fetch */
+    }
     try {
       fetch(`/api/did/streams/${this.streamId}`, {
         method: "DELETE",
         keepalive: true,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: this.sessionId }),
+        body,
       });
     } catch {
       /* ignore */
