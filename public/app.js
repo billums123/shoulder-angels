@@ -653,11 +653,13 @@ async function finishRecording(blob) {
     }
     const { text } = await res.json();
     const t = (text || "").trim();
-    els.youSaid.textContent = "";
-    // Words → answer them. No words but you held the button → react to what they
-    // SEE, so silent gags (finger in your nose, holding something up) still get
-    // a reaction without you having to ask anything.
-    ask(t, t ? {} : { silentUser: true });
+    // Note: don't treat empty as "react to camera" — Whisper hallucinates phantom
+    // text on silence, so silent holds are unreliable. Use the ` hotkey instead.
+    if (t) ask(t);
+    else {
+      els.youSaid.textContent = "";
+      setStatus("Didn't catch that — hold and speak, or type.");
+    }
   } catch (e) {
     setStatus("Transcription failed: " + e.message);
     els.youSaid.textContent = "";
@@ -725,6 +727,15 @@ els.textInput.addEventListener("keydown", (e) => {
     ask(els.textInput.value.trim());
     els.textInput.value = "";
   }
+});
+
+// Hidden demo hotkey: press ` (backtick) and they react to what they SEE — no
+// talking, no transcription (so it's reliable, unlike holding silently). Great
+// for visual gags like the finger-in-nose. Ignored while typing in the box.
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "Backquote" || e.repeat || document.activeElement === els.textInput) return;
+  e.preventDefault();
+  ask("", { silentUser: true }); // ask() no-ops if not connected or mid-turn
 });
 
 // Config: preset face URLs + a health hint.
