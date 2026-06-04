@@ -490,7 +490,9 @@ async function ask(question, { silentUser = false } = {}) {
     // A failed D-ID /talk (e.g. rate limit) must NOT wedge the app — always
     // fall through to reset `busy` below, or hold-to-talk/typing stops working.
     console.error("speak failed:", e);
-    setStatus(/429|Too Many Requests/.test(e.message)
+    setStatus(/Demo limit reached/.test(e.message)
+      ? "Demo limit reached — this public demo caps audio per visitor. Try again later."
+      : /429|Too Many Requests/.test(e.message)
       ? "D-ID is rate-limiting — wait a few seconds, then try again."
       : "Avatar speech failed: " + e.message);
   } finally {

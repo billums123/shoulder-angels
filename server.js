@@ -30,6 +30,37 @@ const PRESENTERS = {
   devil: { image: DEVIL_IMAGE_URL, voice: DEVIL_VOICE_ID },
 };
 
+// ── Per-IP audio-generation budget (abuse guard for the public demo) ──────
+// Caps how many seconds of avatar speech a single IP can generate per rolling
+// window, since each talk costs D-ID + ElevenLabs credits.
+// NOTE: in-memory → best-effort on serverless (per warm instance, not shared).
+// For strict enforcement use a shared store (Vercel KV / Upstash Redis).
+const AUDIO_BUDGET_SECONDS = Number(process.env.AUDIO_BUDGET_SECONDS || 180); // ~3 min
+const AUDIO_WINDOW_MS = Number(process.env.AUDIO_WINDOW_MS || 60 * 60 * 1000); // rolling 1h
+const CHARS_PER_SEC = 14; // rough TTS speaking rate, to estimate audio length
+const audioUsage = new Map(); // ip → { secs, resetAt }
+
+function clientIp(req) {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd.length) return fwd.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
+
+// Charge `seconds` of generated audio to this IP. Returns false (and charges
+// nothing) once the IP is over budget for the current window.
+function chargeAudio(req, seconds) {
+  const ip = clientIp(req);
+  const now = Date.now();
+  let u = audioUsage.get(ip);
+  if (!u || now > u.resetAt) {
+    u = { secs: 0, resetAt: now + AUDIO_WINDOW_MS };
+    audioUsage.set(ip, u);
+  }
+  if (u.secs >= AUDIO_BUDGET_SECONDS) return { ok: false, retryMs: u.resetAt - now };
+  u.secs += seconds;
+  return { ok: true };
+}
+
 // ── D-ID proxy ──────────────────────────────────────────────────────────
 // The API key never leaves the server; the browser talks only to us.
 async function didFetch(endpoint, { method = "POST", body } = {}) {
@@ -183,6 +214,14 @@ app.post("/api/did/streams/:id/talk", async (req, res) => {
   const voice = voice_id || PRESENTERS[presenter]?.voice;
   if (!text || !voice) {
     return res.status(400).json({ error: "missing text or voice" });
+  }
+  // Abuse guard: cap generated-audio seconds per IP per window.
+  const gate = chargeAudio(req, Math.max(1, text.length / CHARS_PER_SEC));
+  if (!gate.ok) {
+    const mins = Math.round(AUDIO_BUDGET_SECONDS / 60);
+    return res.status(429).json({
+      error: `Demo limit reached: this public demo caps ~${mins} min of audio per visitor. Try again later.`,
+    });
   }
   const { ok, status, data } = await didFetch(`/talks/streams/${req.params.id}`, {
     body: {
