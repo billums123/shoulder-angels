@@ -408,7 +408,6 @@ async function toggleMyFace() {
   busy = true;
   els.faceBtn.disabled = true;
   els.talkBtn.disabled = true;
-  let swapped = false;
   const target = !usingMyFace;
 
   try {
@@ -433,7 +432,6 @@ async function toggleMyFace() {
     setBtn(els.faceBtn, usingMyFace ? "Reset faces" : "Use my face",
       usingMyFace ? "ph-arrow-counter-clockwise" : "ph-user-focus");
     setStatus(usingMyFace ? "Meet good-you and evil-you." : "");
-    swapped = true;
   } catch (e) {
     console.error(e);
     usingMyFace = !target; // revert flag on failure
@@ -443,11 +441,8 @@ async function toggleMyFace() {
   busy = false;
   els.faceBtn.disabled = !connected;
   els.talkBtn.disabled = !connected;
-
-  // A freshly respawned D-ID stream renders blank until its first talk, so
-  // kick off an opening line — this makes the new faces appear immediately
-  // (and gives the demo a reaction beat right after the swap).
-  if (swapped && connected) ask("", { silentUser: true });
+  // The new faces are already visible via the decorated stills shown during the
+  // respawn, so we DON'T fire an opening line — they stay quiet until prompted.
 }
 
 // ── A turn: see → think → both speak ─────────────────────────────────────
