@@ -90,7 +90,11 @@ header { text-align: center; margin: 24px 16px 12px; }
 /* ── Stage (clean framed screen) ── */
 .stage {
   position: relative;
-  width: min(94vw, 1120px);
+  /* Fit the viewport HEIGHT too — not just width — so the controls and footer
+     below never get clipped. Reserve ~290px for header + controls + status +
+     footer; the height term only binds on short (or short-and-wide) screens. */
+  width: min(94vw, 1120px, calc((100vh - 290px) * 1.6));
+  width: min(94vw, 1120px, calc((100dvh - 290px) * 1.6));
   aspect-ratio: 16 / 10;
   border-radius: 28px;
   overflow: hidden;
@@ -535,8 +539,9 @@ body.live #text-input { animation-delay: 0.26s; }
   header { margin: 14px 12px 6px; }
   .logo { width: clamp(160px, 46vw, 240px); }
 
-  /* taller portrait stage uses the phone's vertical space + shows you bigger */
-  .stage { width: 94vw; aspect-ratio: 3 / 4; border-radius: 22px; }
+  /* taller portrait stage uses the phone's vertical space + shows you bigger,
+     but still capped by height so the wrapped controls below stay on-screen */
+  .stage { width: min(94vw, calc((100dvh - 300px) * 0.75)); aspect-ratio: 3 / 4; border-radius: 22px; }
   .stage-frame { border-radius: 22px; box-shadow: inset 0 0 0 4px rgba(255,255,255,0.9), inset 12px 0 44px -28px var(--gold-glow), inset -12px 0 44px -28px var(--red-glow); }
 
   .avatar { width: 31%; bottom: 3%; }
