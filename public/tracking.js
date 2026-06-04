@@ -53,24 +53,31 @@ export function startTracking(video, stage, avatars, onPresence) {
   let lastInfer = 0;
   let inferring = false;
   // ~10fps inference → ticks ≈ 100ms each
-  const ABSENT_TICKS = 45; // ~4.5s sustained absence before "where'd you go?"
-  const RETURN_TICKS = 5; // ~0.5s of detections to confirm a return
+  const ABSENT_TICKS = 2; // ~0.2s — call them out almost the instant they leave frame
+  const RETURN_TICKS = 3; // ~0.3s of detections to confirm a return
 
-  const targetFor = (el, point) => {
+  // `outward` is +1 for the avatar on the viewer's right (angel), -1 for the
+  // one on the left (devil) — used to nudge each orb off the shoulder joint and
+  // out toward the arm so it perches on the shoulder instead of the neck/chest.
+  const targetFor = (el, point, outward) => {
     const m = mapToStage(point.x, point.y, video, stage);
     const halfW = el.offsetWidth / 2;
     const halfH = el.offsetHeight / 2;
+    // Perch: lift the orb so its lower edge rests at the shoulder line, and
+    // shift it outward toward the arm (away from the head/neck).
+    const x = m.x + outward * halfW * 0.5;
+    const y = m.y - halfH * 0.6;
     // Clamp to the stage — shoulders are often near/below the bottom edge in
     // tight webcam framing, and we still want the avatar fully visible.
     return {
-      x: Math.min(Math.max(m.x, halfW), stage.clientWidth - halfW),
-      y: Math.min(Math.max(m.y - halfH * 0.3, halfH), stage.clientHeight - halfH),
+      x: Math.min(Math.max(x, halfW), stage.clientWidth - halfW),
+      y: Math.min(Math.max(y, halfH), stage.clientHeight - halfH),
     };
   };
 
   // Filter each (noisy, ~10fps) detection into the target before gliding to it.
-  const setTarget = (key, el, anchor) => {
-    const raw = targetFor(el, anchor);
+  const setTarget = (key, el, anchor, outward) => {
+    const raw = targetFor(el, anchor, outward);
     const prev = target[key];
     target[key] = prev
       ? { x: prev.x + (raw.x - prev.x) * 0.45, y: prev.y + (raw.y - prev.y) * 0.45 }
@@ -116,8 +123,8 @@ export function startTracking(video, stage, avatars, onPresence) {
       found++;
       // Display is mirrored: the person's LEFT shoulder appears on the viewer's
       // right. Angel sits on the right, devil on the left.
-      setTarget("angel", avatars.angel, anchors.left);
-      setTarget("devil", avatars.devil, anchors.right);
+      setTarget("angel", avatars.angel, anchors.left, +1);
+      setTarget("devil", avatars.devil, anchors.right, -1);
       if (!everSeen) {
         everSeen = true;
         present = true;

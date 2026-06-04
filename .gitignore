@@ -1,4 +1,12 @@
 node_modules/
+
+# Secrets — never commit. Keep only .env.example (placeholders).
 .env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
 .DS_Store
 *.log

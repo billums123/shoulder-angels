@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -14,7 +14,7 @@ const {
   DID_API_KEY,
   DID_API_URL = "https://api.d-id.com",
   OPENAI_API_KEY,
-  BRAIN_MODEL = "gpt-4o",
+  BRAIN_MODEL = "gpt-4o-mini", // mini is far faster; plenty witty for short lines
   ANGEL_IMAGE_URL,
   DEVIL_IMAGE_URL,
   ANGEL_VOICE_ID,
@@ -39,6 +39,12 @@ async function didFetch(endpoint, { method = "POST", body } = {}) {
       headers: {
         Authorization: `Basic ${DID_API_KEY}`,
         "Content-Type": "application/json",
+        // Let D-ID synthesize voices from OUR ElevenLabs account (private
+        // cloned/designed voices it otherwise can't fetch). Passed as a header,
+        // not in the provider body — that's the only form D-ID accepts.
+        ...(ELEVENLABS_API_KEY
+          ? { "x-api-key-external": JSON.stringify({ elevenlabs: ELEVENLABS_API_KEY }) }
+          : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -98,7 +104,7 @@ app.post("/api/did/images", async (req, res) => {
 // the same ElevenLabs account connected to D-ID, so D-ID can speak it.
 app.post("/api/clone-voice", async (req, res) => {
   if (!ELEVENLABS_API_KEY) return res.status(500).json({ error: "ELEVENLABS_API_KEY not set" });
-  const m = /^data:(audio\/[\w.+-]+);base64,(.+)$/s.exec(req.body?.audio || "");
+  const m = /^data:(audio\/[\w.+-]+)(?:;[^,]*)?;base64,(.+)$/s.exec(req.body?.audio || "");
   if (!m) return res.status(400).json({ error: "bad audio data" });
   const buf = Buffer.from(m[2], "base64");
   const ext = m[1].includes("webm") ? "webm" : /mpeg|mp3/.test(m[1]) ? "mp3" : m[1].includes("wav") ? "wav" : "m4a";
@@ -208,12 +214,12 @@ const SYSTEM_PROMPT = `You are the writers' room for "Shoulder Angels" — a com
 
 There are two characters perched by the user's head, and you write BOTH of their lines for every turn:
 - ANGEL 😇 — the good conscience. Wholesome, encouraging, a little smug about being right. Gives the responsible take.
-- DEVIL 😈 — the bad conscience. Mischievous, indulgent, hilarious. Tempts the user toward the fun/lazy/over-the-top option. Always playful and harmless — never genuinely harmful, hateful, or dangerous; "bad" here means cheeky, not unsafe.
+- DEVIL 😈 — the bad conscience. Sharp-tongued, sardonic, and gleefully devilish. Roasts the user's hesitation, pokes at their flaws and bad habits, and drips with sarcasm. Tempts them toward the indulgent, lazy, chaotic, or over-the-top option — and makes the responsible choice sound pathetic. Cutting and a little wicked, with a smirk. Always comedic and harmless, though — never genuinely harmful, hateful, cruel about appearance/identity, or dangerous; "bad" here means a savage roast and devilish temptation, not actual malice.
 
 Rules for every turn:
 - You are given the user's spoken question/comment AND a snapshot from their camera. USE what you see — react to their face, expression, outfit, room, what they're holding. Specific observations are funnier and prove you can see them.
 - The two characters know about each other and bicker. The devil often pokes at the angel; the angel sighs at the devil. Make it feel like a real back-and-forth.
-- Keep EACH line to 1-2 short sentences. This is spoken aloud by a TTS avatar, so be punchy and conversational. No stage directions, no emojis in the spoken text, no markdown.
+- Keep EACH line to ONE short, punchy sentence — aim for about 8-16 words, never more than ~20. Shorter lines speak faster and keep the back-and-forth snappy. This is spoken aloud by a TTS avatar, so be conversational. No stage directions, no emojis in the spoken text, no markdown.
 - Stay in character. Be quick and witty over verbose.`;
 
 const REPLY_TOOL = {
@@ -258,7 +264,7 @@ app.post("/api/brain", async (req, res) => {
   try {
     const completion = await openai.chat.completions.create({
       model: BRAIN_MODEL,
-      max_tokens: 400,
+      max_tokens: 200, // two short lines — smaller cap = faster completion
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         ...priorTurns,
@@ -274,6 +280,33 @@ app.post("/api/brain", async (req, res) => {
   } catch (err) {
     console.error("brain error:", err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Speech-to-text: transcribe a recorded audio clip via OpenAI Whisper ──
+app.post("/api/transcribe", async (req, res) => {
+  if (!openai) return res.status(500).json({ error: "OPENAI_API_KEY not set" });
+  const m = /^data:(audio\/[\w.+-]+)(?:;[^,]*)?;base64,(.+)$/s.exec(req.body?.audio || "");
+  if (!m) return res.status(400).json({ error: "bad audio data" });
+  const baseMime = m[1];
+  const buf = Buffer.from(m[2], "base64");
+  const ext = baseMime.includes("webm")
+    ? "webm"
+    : /mp4|m4a/.test(baseMime)
+    ? "m4a"
+    : /mpeg|mp3/.test(baseMime)
+    ? "mp3"
+    : baseMime.includes("wav")
+    ? "wav"
+    : "webm";
+
+  try {
+    const file = await toFile(buf, `audio.${ext}`, { type: baseMime });
+    const result = await openai.audio.transcriptions.create({ file, model: "whisper-1" });
+    res.json({ text: (result.text || "").trim() });
+  } catch (err) {
+    console.error("transcribe error:", err.message);
+    res.status(502).json({ error: err.message });
   }
 });
 

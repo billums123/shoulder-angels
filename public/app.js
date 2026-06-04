@@ -194,6 +194,21 @@ async function cloneAndApply(blob) {
   setStatus("Now they speak in your voice. Ask them something!");
 }
 
+// The voice button toggles: clone your voice when off, restore preset voices
+// when already using yours.
+function toggleMyVoice() {
+  if (busy || !connected) return;
+  if (voiceOverride) resetMyVoice();
+  else useMyVoice();
+}
+
+function resetMyVoice() {
+  voiceOverride = null; // speak() falls back to each presenter's preset voice
+  setBtn(els.voiceBtn, "Use my voice", "ph-waveform");
+  els.voiceBtn.classList.remove("active");
+  setStatus("Back to their own voices.");
+}
+
 async function useMyVoice() {
   if (busy || !connected) return;
   busy = true;
@@ -472,12 +487,21 @@ async function ask(question, { silentUser = false } = {}) {
     : [["devil", reply.devil], ["angel", reply.angel]];
   angelFirst = !angelFirst;
 
-  for (const [who, line] of order) {
-    await speakAs(who, line);
+  try {
+    for (const [who, line] of order) {
+      await speakAs(who, line);
+    }
+  } catch (e) {
+    // A failed D-ID /talk (e.g. rate limit) must NOT wedge the app — always
+    // fall through to reset `busy` below, or hold-to-talk/typing stops working.
+    console.error("speak failed:", e);
+    setStatus(/429|Too Many Requests/.test(e.message)
+      ? "D-ID is rate-limiting — wait a few seconds, then try again."
+      : "Avatar speech failed: " + e.message);
+  } finally {
+    busy = false;
+    els.talkBtn.disabled = !connected;
   }
-
-  busy = false;
-  els.talkBtn.disabled = !connected;
 }
 
 async function speakAs(who, line) {
@@ -486,86 +510,161 @@ async function speakAs(who, line) {
   const avatar = who === "angel" ? angel : devil;
   caption.textContent = line;
   wrap.classList.add("speaking");
-  revealLive(who); // first talk → fade the still out to the live face
+  // Keep the decorated still in place until D-ID actually starts streaming
+  // talking frames — fading it the instant we call speak() would flash a blank
+  // orb during the render gap. Fallback timer in case the event is missed.
+  let revealed = false;
+  const reveal = () => { if (!revealed) { revealed = true; revealLive(who); } };
+  avatar.onStreamStart = reveal;
+  const revealFallback = setTimeout(reveal, 1500);
   try {
     await avatar.speak(line, voiceOverride);
   } finally {
+    clearTimeout(revealFallback);
+    avatar.onStreamStart = () => {};
     wrap.classList.remove("speaking");
   }
 }
 
 // ── Presence reactions (canned + gated) ─────────────────────────────────
-// One of them notices when you leave / come back. Canned lines (no brain call),
-// fired only on sustained absence (handled in tracking.js) and rate-limited.
-const QUIP_COOLDOWN = 25000; // ms between quips
-let lastQuip = 0;
+// BOTH characters take turns reacting when you leave / come back. Canned lines
+// (no brain call), fired on absence/return detected in tracking.js. Cooldown is
+// per-event so a "welcome back" is never blocked by the "you left" line.
+const QUIP_COOLDOWN = 6000; // ms before the SAME event can re-fire (anti-flicker)
+const lastQuipAt = { left: 0, returned: 0 };
+let pendingQuip = null; // a presence event that arrived mid-speech, fired after
 const QUIPS = {
   left: {
-    angel: ["Take your time — I'll be right here.", "Off doing something good, I hope?", "Don't be long!"],
-    devil: ["Rude. I was mid-thought.", "Hey — where'd you go?", "Sneaking off already? Suspicious."],
+    angel: ["Take your time — I'll be right here.", "Off to do something good, I hope?", "Hurry back!"],
+    devil: ["Oh sure, just walk off mid-conversation.", "Wow. Rude. I was mid-genius.", "Running from your problems? Bold."],
   },
   returned: {
-    angel: ["There you are — welcome back!", "Oh good, you're back.", "Knew you'd return."],
-    devil: ["Finally. Took you long enough.", "Back for more bad ideas? Excellent.", "There they are."],
+    angel: ["There you are — welcome back!", "Oh good, you came back to us!", "Knew you couldn't stay away."],
+    devil: [
+      "Oh look, the prodigal genius returns.",
+      "Back already? I was enjoying the peace and quiet.",
+      "Welcome back, superstar. We were on the edge of our halos.",
+      "Took you long enough — get lost finding the chair?",
+    ],
   },
 };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 async function quip(event) {
-  // Gated: never interrupt a real turn / recording / face-swap, and obey cooldown.
-  if (busy || !connected || !QUIPS[event]) return;
+  if (!connected || !QUIPS[event]) return;
+  // Mid-speech (a real turn or the other reaction)? Queue this one for after.
+  if (busy) { pendingQuip = event; return; }
   const now = performance.now();
-  if (now - lastQuip < QUIP_COOLDOWN) return;
-  lastQuip = now;
+  if (now - lastQuipAt[event] < QUIP_COOLDOWN) return;
+  lastQuipAt[event] = now;
   busy = true;
   els.talkBtn.disabled = true;
-  const who = Math.random() < 0.5 ? "angel" : "devil";
+
+  // On return, angel welcomes first so the devil's sarcasm lands as the kicker;
+  // on leaving, just alternate who opens.
+  const order = event === "returned"
+    ? ["angel", "devil"]
+    : (angelFirst ? ["angel", "devil"] : ["devil", "angel"]);
+  if (event !== "returned") angelFirst = !angelFirst;
+
   try {
-    await speakAs(who, pick(QUIPS[event][who]));
+    for (const who of order) await speakAs(who, pick(QUIPS[event][who]));
   } catch (e) {
     console.warn("quip failed:", e.message);
+  } finally {
+    busy = false;
+    els.talkBtn.disabled = !connected;
+    // Fire a queued reaction (e.g. you came back while they were still calling
+    // you out) — different event, so its own cooldown won't block it.
+    const next = pendingQuip;
+    pendingQuip = null;
+    if (next && next !== event) quip(next);
   }
-  busy = false;
-  els.talkBtn.disabled = !connected;
 }
 
-// ── Speech-to-text (browser, no key) ─────────────────────────────────────
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let listening = false;
+// ── Speech-to-text (record → server transcribe) ──────────────────────────
+// Browser SpeechRecognition is unreliable here (Chrome's Google backend is
+// unreachable → "network" error). Instead we record the whole hold with
+// MediaRecorder and POST it to /api/transcribe on release.
+let recording = false; // true between start/stop — guards against double-starts
+let mediaRecorder = null;
+let micStream = null;
+let recChunks = [];
 
-if (SR) {
-  recognition = new SR();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = "en-US";
-  recognition.onresult = (e) => {
-    const transcript = e.results[0][0].transcript.trim();
-    if (transcript) ask(transcript);
-  };
-  recognition.onend = () => {
-    listening = false;
-    els.talkBtn.classList.remove("listening");
-  };
-  recognition.onerror = () => {
-    listening = false;
-    els.talkBtn.classList.remove("listening");
-  };
-}
-
-function startListening() {
-  if (!recognition || listening || busy || !connected) return;
-  listening = true;
-  els.talkBtn.classList.add("listening");
-  els.youSaid.textContent = "Listening…";
+async function startListening() {
+  if (!connected || busy || recording) return;
+  recording = true;
   try {
-    recognition.start();
-  } catch {
-    /* already started */
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    recording = false;
+    if (e.name === "NotAllowedError") {
+      setStatus("Microphone blocked — allow mic access in the address bar, then retry.");
+    } else {
+      setStatus("Mic unavailable: " + e.message);
+    }
+    return;
   }
+  recChunks = [];
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.ondataavailable = (e) => e.data.size && recChunks.push(e.data);
+  mediaRecorder.start();
+  els.talkBtn.classList.add("listening"); // turns the button orange
+  els.youSaid.textContent = "Listening…";
 }
+
 function stopListening() {
-  if (recognition && listening) recognition.stop();
+  if (!recording || !mediaRecorder) return;
+  // Wait for the recorder to flush, then handle the audio.
+  const rec = mediaRecorder;
+  rec.onstop = () => {
+    const blob = new Blob(recChunks, { type: rec.mimeType || "audio/webm" });
+    micStream?.getTracks().forEach((t) => t.stop());
+    micStream = null;
+    mediaRecorder = null;
+    els.talkBtn.classList.remove("listening");
+    recording = false;
+    finishRecording(blob);
+  };
+  rec.stop();
+}
+
+async function finishRecording(blob) {
+  // Released too fast to capture anything — quietly reset.
+  if (!blob.size) {
+    els.youSaid.textContent = "";
+    return;
+  }
+  els.youSaid.textContent = "Transcribing…";
+  try {
+    const dataUrl = await blobToDataUrl(blob);
+    const res = await fetch("/api/transcribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audio: dataUrl }),
+    });
+    if (!res.ok) {
+      let reason = res.statusText;
+      try {
+        reason = (await res.json()).error || reason;
+      } catch {
+        /* non-JSON error body */
+      }
+      setStatus("Transcription failed: " + reason);
+      els.youSaid.textContent = "";
+      return;
+    }
+    const { text } = await res.json();
+    const t = (text || "").trim();
+    if (t) ask(t);
+    else {
+      els.youSaid.textContent = "";
+      setStatus("Didn't catch that — hold and speak, or type.");
+    }
+  } catch (e) {
+    setStatus("Transcription failed: " + e.message);
+    els.youSaid.textContent = "";
+  }
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────
@@ -586,7 +685,7 @@ els.disconnectBtn.addEventListener("click", () => {
   if (connected) disconnect();
 });
 els.faceBtn.addEventListener("click", toggleMyFace);
-els.voiceBtn.addEventListener("click", useMyVoice);
+els.voiceBtn.addEventListener("click", toggleMyVoice);
 // Voice upload temporarily disabled
 // els.voiceFile.addEventListener("change", (e) => {
 //   const f = e.target.files?.[0];
@@ -600,13 +699,29 @@ window.addEventListener("pagehide", () => {
   devil?.beaconClose();
 });
 
-// Hold-to-talk (pointer covers mouse + touch).
+// Hold-to-talk (pointer covers mouse + touch). Capture the pointer so a slight
+// drift off the button doesn't cut the recording short — release is detected
+// wherever the pointer ends up.
 els.talkBtn.addEventListener("pointerdown", (e) => {
   e.preventDefault();
+  try { els.talkBtn.setPointerCapture(e.pointerId); } catch { /* ignore */ }
   startListening();
 });
 els.talkBtn.addEventListener("pointerup", stopListening);
-els.talkBtn.addEventListener("pointerleave", stopListening);
+els.talkBtn.addEventListener("pointercancel", stopListening);
+
+// Spacebar = hold-to-talk, mirroring the button. Ignore key auto-repeat and
+// don't hijack the space key while the user is typing in the text box.
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "Space" || e.repeat || document.activeElement === els.textInput) return;
+  e.preventDefault();
+  startListening();
+});
+window.addEventListener("keyup", (e) => {
+  if (e.code !== "Space" || document.activeElement === els.textInput) return;
+  e.preventDefault();
+  stopListening();
+});
 
 els.textInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && els.textInput.value.trim()) {
@@ -614,10 +729,6 @@ els.textInput.addEventListener("keydown", (e) => {
     els.textInput.value = "";
   }
 });
-
-if (!SR) {
-  els.talkBtn.title = "Speech recognition unsupported here — type your question instead.";
-}
 
 // Config: preset face URLs + a health hint.
 fetch("/api/config")

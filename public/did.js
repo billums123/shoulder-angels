@@ -14,6 +14,7 @@ export class DidAvatar {
     this.streamId = null;
     this.sessionId = null;
     this.onState = () => {};
+    this.onStreamStart = () => {}; // fires when D-ID begins streaming talk frames
     this._doneWaiters = [];
   }
 
@@ -51,6 +52,7 @@ export class DidAvatar {
     // a data channel. Use them to know exactly when a line finishes speaking.
     const handleMessage = (msg) => {
       const text = typeof msg === "string" ? msg : "";
+      if (text.includes("stream/started")) this.onStreamStart();
       if (text.includes("stream/done")) this._resolveDone();
     };
     pc.addEventListener("datachannel", (e) => {
@@ -145,9 +147,10 @@ export class DidAvatar {
   }
 
   _waitForDone(text) {
-    // Fallback duration estimate (~14 chars/sec + buffer) in case the
-    // data-channel "done" event doesn't arrive.
-    const fallbackMs = Math.max(1800, (text.length / 14) * 1000) + 1200;
+    // Fallback duration estimate in case the data-channel "done" event doesn't
+    // arrive (it normally does, and resolves the moment audio ends). Kept just
+    // above real speech length so turn-taking isn't padded with dead air.
+    const fallbackMs = Math.max(1300, (text.length / 15) * 1000) + 700;
     return new Promise((resolve) => {
       let settled = false;
       const done = () => {
